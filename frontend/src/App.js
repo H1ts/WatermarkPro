@@ -26,6 +26,18 @@ function App() {
   const pollRef = useRef(null);
   const previewRef = useRef(null);
   const draggingRef = useRef(false);
+  const [previewWidth, setPreviewWidth] = useState(0);
+
+  // Track preview container width for logo pixel sizing
+  useEffect(() => {
+    const el = previewRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      setPreviewWidth(entry.contentRect.width);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const resetState = () => {
     setFile(null);
@@ -36,8 +48,6 @@ function App() {
     setWatchUrl(null);
     setError(null);
     setUploadProgress(0);
-    setLogoFile(null);
-    setLogoId(null);
   };
 
   const handleLogoSelect = async (e) => {
@@ -314,7 +324,7 @@ function App() {
                         alt=""
                         className="wm-preview-logo"
                         style={{
-                          width: `${logoScale}%`,
+                          width: `${Math.round(previewWidth * logoScale / 100)}px`,
                           opacity: 1 - wmOpacity / 100,
                         }}
                       />

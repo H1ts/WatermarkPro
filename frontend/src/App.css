@@ -197,7 +197,6 @@ body {
 }
 
 .wm-preview-logo {
-  max-height: 60px;
   object-fit: contain;
 }
 

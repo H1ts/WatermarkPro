@@ -78,7 +78,7 @@ def build_ffmpeg_filter(client_name: str, x_pct: float = 50.0, y_pct: float = 50
 
     # scale2ref scales logo relative to main video
     fc = (
-        f"[1:v][0:v]scale2ref=w='min(iw,ref_w*{scale_frac})':h='ow*ih/iw'[logo][base];"
+        f"[1:v][0:v]scale2ref=w='ref_w*{scale_frac}':h='ow*ih/iw'[logo][base];"
         f"[logo]format=rgba,colorchannelmixer=aa={alpha}[logoalpha];"
         f"[base][logoalpha]overlay={overlay_x}:{overlay_y},"
         f"{drawtext}"
