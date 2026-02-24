@@ -179,6 +179,20 @@ body {
   touch-action: none;
 }
 
+.wm-preview-timecode {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #fff;
+  font-weight: 600;
+  font-family: monospace;
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+  pointer-events: none;
+  z-index: 1;
+}
+
 .wm-preview-marker {
   position: absolute;
   transform: translate(-50%, -50%);

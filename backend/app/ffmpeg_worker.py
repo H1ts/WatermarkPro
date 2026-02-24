@@ -51,11 +51,11 @@ def _build_drawtext(client_name: str, x_pct: float = 50.0, y_pct: float = 50.0,
         f":x={x_expr}:y={y_expr}"
     )
 
-    # Timecode always at bottom-center
+    # Timecode at top-center
     timecode = (
         f"drawtext=timecode='00\\:00\\:00\\:00'"
-        f":rate=25:fontsize=24:fontcolor=white@{tc_alpha}"
-        f":x=(w-text_w)/2:y=h-th-20"
+        f":rate=25:fontsize=36:fontcolor=white@{tc_alpha}"
+        f":x=(w-text_w)/2:y=20"
     )
 
     return f"{wm_filter},{timecode}"

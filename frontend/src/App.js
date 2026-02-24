@@ -305,6 +305,15 @@ function App() {
                   onTouchMove={onPreviewMouseMove}
                   onTouchEnd={onPreviewMouseUp}
                 >
+                  <span
+                    className="wm-preview-timecode"
+                    style={{
+                      fontSize: `${Math.max(8, Math.round(36 * previewWidth / 1920))}px`,
+                      opacity: Math.min((1 - wmOpacity / 100) + 0.4, 1),
+                    }}
+                  >
+                    00:00:00:00
+                  </span>
                   <div
                     className="wm-preview-marker"
                     style={{
