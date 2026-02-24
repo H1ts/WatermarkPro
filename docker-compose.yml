@@ -17,7 +17,7 @@ services:
       - UPLOAD_DIR=/data/uploads
       - OUTPUT_DIR=/data/outputs
       - HLS_DIR=/data/hls
-      - BASE_URL=http://localhost
+      - BASE_URL=${BASE_URL:-http://localhost}
     volumes:
       - video_data:/data
 
