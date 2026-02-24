@@ -6,6 +6,9 @@ const API = '/api';
 function App() {
   const [file, setFile] = useState(null);
   const [clientName, setClientName] = useState('');
+  const [wmPosition, setWmPosition] = useState('center');
+  const [wmOpacity, setWmOpacity] = useState(30);
+  const [wmFontSize, setWmFontSize] = useState(48);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [fileId, setFileId] = useState(null);
@@ -16,6 +19,15 @@ function App() {
   const [error, setError] = useState(null);
   const [dragOver, setDragOver] = useState(false);
   const pollRef = useRef(null);
+
+  const positionLabels = {
+    'center': 'Центр',
+    'top-left': 'Верх-лево',
+    'top-right': 'Верх-право',
+    'bottom-left': 'Низ-лево',
+    'bottom-right': 'Низ-право',
+    'diagonal': 'Диагональ',
+  };
 
   const resetState = () => {
     setFile(null);
@@ -93,7 +105,13 @@ function App() {
       const procRes = await fetch(`${API}/process`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ file_id: result.file_id, client_name: clientName.trim() }),
+        body: JSON.stringify({
+          file_id: result.file_id,
+          client_name: clientName.trim(),
+          wm_position: wmPosition,
+          wm_opacity: wmOpacity,
+          wm_font_size: wmFontSize,
+        }),
       });
       const procData = await procRes.json();
 
@@ -177,14 +195,66 @@ function App() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="client-name">Client name (watermark text)</label>
+              <label htmlFor="client-name">Имя клиента (текст watermark)</label>
               <input
                 id="client-name"
                 type="text"
-                placeholder="Ivanov Ivan Ivanovich"
+                placeholder="Иванов Иван Иванович"
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
               />
+            </div>
+
+            <div className="wm-settings">
+              <h3 className="wm-settings-title">Настройки watermark</h3>
+
+              <div className="wm-row">
+                <label>Позиция</label>
+                <div className="wm-positions">
+                  {Object.entries(positionLabels).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className={`wm-pos-btn ${wmPosition === value ? 'wm-pos-btn--active' : ''}`}
+                      onClick={() => setWmPosition(value)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="wm-row">
+                <label>Прозрачность: {wmOpacity}%</label>
+                <input
+                  type="range"
+                  min="20"
+                  max="80"
+                  value={wmOpacity}
+                  onChange={(e) => setWmOpacity(Number(e.target.value))}
+                  className="wm-slider"
+                />
+                <div className="wm-range-labels">
+                  <span>20%</span>
+                  <span>80%</span>
+                </div>
+              </div>
+
+              <div className="wm-row">
+                <label>Размер шрифта: {wmFontSize}px</label>
+                <input
+                  type="range"
+                  min="16"
+                  max="120"
+                  value={wmFontSize}
+                  onChange={(e) => setWmFontSize(Number(e.target.value))}
+                  className="wm-slider"
+                />
+                <div className="wm-range-labels">
+                  <span>16px</span>
+                  <span>120px</span>
+                </div>
+              </div>
             </div>
 
             <button

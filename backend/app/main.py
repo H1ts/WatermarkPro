@@ -72,10 +72,18 @@ async def process(req: ProcessRequest):
         "filename": filename,
         "client_name": req.client_name,
         "file_id": req.file_id,
+        "wm_position": req.wm_position.value,
+        "wm_opacity": str(req.wm_opacity),
+        "wm_font_size": str(req.wm_font_size),
     })
     await r.aclose()
 
-    asyncio.create_task(process_video(job_id, input_path, req.client_name))
+    asyncio.create_task(process_video(
+        job_id, input_path, req.client_name,
+        wm_position=req.wm_position.value,
+        wm_opacity=req.wm_opacity,
+        wm_font_size=req.wm_font_size,
+    ))
 
     return {
         "job_id": job_id,

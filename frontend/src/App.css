@@ -133,6 +133,102 @@ body {
   border-color: #7c3aed;
 }
 
+/* Watermark Settings */
+.wm-settings {
+  margin-top: 20px;
+  padding: 16px;
+  background: #12121a;
+  border: 1px solid #2a2a3e;
+  border-radius: 10px;
+}
+
+.wm-settings-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #a78bfa;
+  margin-bottom: 14px;
+}
+
+.wm-row {
+  margin-bottom: 14px;
+}
+
+.wm-row:last-child {
+  margin-bottom: 0;
+}
+
+.wm-row label {
+  display: block;
+  font-size: 13px;
+  color: #8b8ba0;
+  margin-bottom: 8px;
+}
+
+.wm-positions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.wm-pos-btn {
+  padding: 6px 12px;
+  border: 1px solid #2a2a3e;
+  border-radius: 6px;
+  background: #0a0a0f;
+  color: #8b8ba0;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.wm-pos-btn:hover {
+  border-color: #7c3aed;
+  color: #e2e2e8;
+}
+
+.wm-pos-btn--active {
+  border-color: #7c3aed;
+  background: #1e1b4b;
+  color: #a78bfa;
+}
+
+.wm-slider {
+  width: 100%;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #2a2a3e;
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.wm-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #7c3aed;
+  cursor: pointer;
+}
+
+.wm-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #7c3aed;
+  border: none;
+  cursor: pointer;
+}
+
+.wm-range-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #4a4a5e;
+}
+
 /* Button */
 .btn-process {
   width: 100%;
