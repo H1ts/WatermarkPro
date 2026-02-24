@@ -109,11 +109,11 @@ def build_ffmpeg_filter(client_name: str, position: str = "center",
         return [], "-vf", drawtext
 
     overlay_pos = _logo_overlay_pos(position)
-    # Scale logo to max 15% of video width, preserve aspect ratio, apply opacity
+    # scale2ref scales logo relative to main video: max 15% of video width
     fc = (
-        f"[1:v]scale='min(iw,main_w*0.15)':-1,format=rgba,"
-        f"colorchannelmixer=aa={alpha}[logo];"
-        f"[0:v][logo]overlay={overlay_pos},"
+        f"[1:v][0:v]scale2ref=w='min(iw,ref_w*0.15)':h='ow*ih/iw'[logo][base];"
+        f"[logo]format=rgba,colorchannelmixer=aa={alpha}[logoalpha];"
+        f"[base][logoalpha]overlay={overlay_pos},"
         f"{drawtext}"
     )
     return ["-i", logo_path], "-filter_complex", fc
