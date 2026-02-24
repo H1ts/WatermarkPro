@@ -26,10 +26,12 @@ async def get_duration(input_path: str) -> float:
 
 
 def _build_drawtext(client_name: str, x_pct: float = 50.0, y_pct: float = 50.0,
-                    opacity: int = 30, font_size: int = 48) -> str:
+                    opacity: int = 30, font_size: int = 48,
+                    has_logo: bool = False) -> str:
     """Build drawtext filter chain (text watermark + timecode).
 
     x_pct/y_pct: 0-100 percentage of video dimensions for watermark center.
+    has_logo: when True, shift text up so it doesn't overlap logo below.
     """
     safe_name = client_name.replace("'", "'\\''").replace(":", "\\:")
     # opacity = transparency percentage, so invert for FFmpeg alpha (visibility)
@@ -38,7 +40,12 @@ def _build_drawtext(client_name: str, x_pct: float = 50.0, y_pct: float = 50.0,
 
     # Position text centered at x_pct/y_pct of the video
     x_expr = f"w*{x_pct}/100-text_w/2"
-    y_expr = f"h*{y_pct}/100-text_h/2"
+    if has_logo:
+        # Shift text up: bottom edge of text sits at gap above center
+        gap = max(10, font_size // 4)
+        y_expr = f"h*{y_pct}/100-text_h-{gap}"
+    else:
+        y_expr = f"h*{y_pct}/100-text_h/2"
 
     wm_filter = (
         f"drawtext=text='{safe_name}'"
@@ -64,15 +71,17 @@ def build_ffmpeg_filter(client_name: str, x_pct: float = 50.0, y_pct: float = 50
     x_pct/y_pct: 0-100 percentage coordinates for watermark center.
     logo_scale: logo width as percentage of video width (10-50).
     """
-    drawtext = _build_drawtext(client_name, x_pct, y_pct, opacity, font_size)
+    has_logo = bool(logo_path)
+    drawtext = _build_drawtext(client_name, x_pct, y_pct, opacity, font_size, has_logo)
     alpha = round(1 - opacity / 100, 2)
 
     if not logo_path:
         return [], "-vf", drawtext
 
-    # Logo overlay position: center logo at x_pct/y_pct
+    # Logo overlay: logo top edge sits just below center point
+    gap = max(10, font_size // 4)
     overlay_x = f"W*{x_pct}/100-w/2"
-    overlay_y = f"H*{y_pct}/100-h/2"
+    overlay_y = f"H*{y_pct}/100+{gap}"
 
     scale_frac = round(logo_scale / 100, 2)
 
