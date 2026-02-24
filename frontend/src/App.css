@@ -190,18 +190,15 @@ body {
 }
 
 .wm-preview-text {
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 11px;
+  color: #fff;
   font-weight: 600;
   white-space: nowrap;
   text-shadow: 0 1px 3px rgba(0,0,0,0.8);
 }
 
 .wm-preview-logo {
-  max-width: 48px;
-  max-height: 32px;
+  max-height: 60px;
   object-fit: contain;
-  opacity: 0.6;
 }
 
 .wm-slider {

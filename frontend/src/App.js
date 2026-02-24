@@ -299,7 +299,13 @@ function App() {
                     className="wm-preview-marker"
                     style={{ left: `${wmX}%`, top: `${wmY}%` }}
                   >
-                    <span className="wm-preview-text">
+                    <span
+                      className="wm-preview-text"
+                      style={{
+                        fontSize: `${Math.max(8, wmFontSize * 0.22)}px`,
+                        opacity: 1 - wmOpacity / 100,
+                      }}
+                    >
                       {clientName.trim() || 'ФИО'}
                     </span>
                     {logoFile && (
@@ -307,6 +313,10 @@ function App() {
                         src={URL.createObjectURL(logoFile)}
                         alt=""
                         className="wm-preview-logo"
+                        style={{
+                          width: `${logoScale}%`,
+                          opacity: 1 - wmOpacity / 100,
+                        }}
                       />
                     )}
                   </div>

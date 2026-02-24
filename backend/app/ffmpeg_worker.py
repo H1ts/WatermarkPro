@@ -32,7 +32,8 @@ def _build_drawtext(client_name: str, x_pct: float = 50.0, y_pct: float = 50.0,
     x_pct/y_pct: 0-100 percentage of video dimensions for watermark center.
     """
     safe_name = client_name.replace("'", "'\\''").replace(":", "\\:")
-    alpha = round(opacity / 100, 2)
+    # opacity = transparency percentage, so invert for FFmpeg alpha (visibility)
+    alpha = round(1 - opacity / 100, 2)
     tc_alpha = min(alpha + 0.4, 1.0)
 
     # Position text centered at x_pct/y_pct of the video
@@ -64,7 +65,7 @@ def build_ffmpeg_filter(client_name: str, x_pct: float = 50.0, y_pct: float = 50
     logo_scale: logo width as percentage of video width (10-50).
     """
     drawtext = _build_drawtext(client_name, x_pct, y_pct, opacity, font_size)
-    alpha = round(opacity / 100, 2)
+    alpha = round(1 - opacity / 100, 2)
 
     if not logo_path:
         return [], "-vf", drawtext
