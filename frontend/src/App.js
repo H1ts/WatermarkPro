@@ -307,12 +307,16 @@ function App() {
                 >
                   <div
                     className="wm-preview-marker"
-                    style={{ left: `${wmX}%`, top: `${wmY}%` }}
+                    style={{
+                      left: `${wmX}%`,
+                      top: `${wmY}%`,
+                      gap: `${Math.max(2, Math.round(Math.max(10, wmFontSize / 4) * previewWidth / 1920))}px`,
+                    }}
                   >
                     <span
                       className="wm-preview-text"
                       style={{
-                        fontSize: `${Math.max(8, wmFontSize * 0.22)}px`,
+                        fontSize: `${Math.max(8, Math.round(wmFontSize * previewWidth / 1920))}px`,
                         opacity: 1 - wmOpacity / 100,
                       }}
                     >
