@@ -44,7 +44,7 @@ PRD: `WatermarkPro_PRD.docx` в корне репозитория — полна
 - [ ] tus protocol — резюмируемая загрузка для больших файлов (до 50 GB)
 
 ### Не готово — MVP P1 (важные, но не блокируют запуск)
-- [ ] Лого watermark — overlay PNG поверх видео
+- [x] Лого watermark — overlay PNG/JPG/WebP поверх видео (до 5 МБ, масштаб 15% ширины)
 - [ ] MP4 HQ рендер (slow preset, CRF 18)
 - [ ] WebSocket прогресс вместо polling
 - [ ] Пакетная загрузка нескольких файлов

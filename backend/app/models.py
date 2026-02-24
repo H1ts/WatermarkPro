@@ -25,6 +25,7 @@ class ProcessRequest(BaseModel):
     wm_position: WatermarkPosition = WatermarkPosition.CENTER
     wm_opacity: int = Field(default=30, ge=20, le=80)
     wm_font_size: int = Field(default=48, ge=16, le=120)
+    logo_id: Optional[str] = None
 
 
 class JobInfo(BaseModel):

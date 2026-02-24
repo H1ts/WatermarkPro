@@ -9,6 +9,9 @@ function App() {
   const [wmPosition, setWmPosition] = useState('center');
   const [wmOpacity, setWmOpacity] = useState(30);
   const [wmFontSize, setWmFontSize] = useState(48);
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoId, setLogoId] = useState(null);
+  const [logoUploading, setLogoUploading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [fileId, setFileId] = useState(null);
@@ -38,6 +41,42 @@ function App() {
     setWatchUrl(null);
     setError(null);
     setUploadProgress(0);
+    setLogoFile(null);
+    setLogoId(null);
+  };
+
+  const handleLogoSelect = async (e) => {
+    const selected = e.target.files[0];
+    if (!selected) return;
+    if (selected.size > 5 * 1024 * 1024) {
+      setError('Logo too large (max 5 MB)');
+      return;
+    }
+    if (!selected.type.startsWith('image/')) {
+      setError('Please select an image file (PNG, JPG, WebP)');
+      return;
+    }
+    setLogoFile(selected);
+    setLogoUploading(true);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.append('file', selected);
+      const res = await fetch(`${API}/upload-logo`, { method: 'POST', body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Logo upload failed');
+      setLogoId(data.logo_id);
+    } catch (err) {
+      setError(err.message);
+      setLogoFile(null);
+    } finally {
+      setLogoUploading(false);
+    }
+  };
+
+  const removeLogo = () => {
+    setLogoFile(null);
+    setLogoId(null);
   };
 
   const handleDrop = useCallback((e) => {
@@ -111,6 +150,7 @@ function App() {
           wm_position: wmPosition,
           wm_opacity: wmOpacity,
           wm_font_size: wmFontSize,
+          ...(logoId && { logo_id: logoId }),
         }),
       });
       const procData = await procRes.json();
@@ -254,6 +294,39 @@ function App() {
                   <span>16px</span>
                   <span>120px</span>
                 </div>
+              </div>
+
+              <div className="wm-row">
+                <label>Лого (PNG, JPG, WebP, до 5 МБ)</label>
+                {logoFile ? (
+                  <div className="logo-preview">
+                    <img
+                      src={URL.createObjectURL(logoFile)}
+                      alt="Logo preview"
+                      className="logo-thumb"
+                    />
+                    <span className="logo-name">{logoFile.name}</span>
+                    <button type="button" className="logo-remove" onClick={removeLogo}>
+                      &#10005;
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="logo-upload-btn"
+                    onClick={() => document.getElementById('logo-input').click()}
+                    disabled={logoUploading}
+                  >
+                    {logoUploading ? 'Загрузка...' : 'Выбрать лого'}
+                  </button>
+                )}
+                <input
+                  id="logo-input"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={handleLogoSelect}
+                  hidden
+                />
               </div>
             </div>
 

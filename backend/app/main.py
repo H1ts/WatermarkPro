@@ -4,7 +4,7 @@ import uuid
 
 import aiofiles
 import redis.asyncio as redis
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 
@@ -54,6 +54,43 @@ async def upload_video(file: UploadFile = File(...)):
     return {"file_id": file_id, "filename": file.filename, "size": os.path.getsize(dest)}
 
 
+LOGO_DIR = os.path.join(UPLOAD_DIR, "logos")
+
+ALLOWED_LOGO_TYPES = {"image/png", "image/jpeg", "image/webp"}
+MAX_LOGO_SIZE = 5 * 1024 * 1024  # 5 MB
+
+
+@app.post("/upload-logo")
+async def upload_logo(file: UploadFile = File(...)):
+    if file.content_type not in ALLOWED_LOGO_TYPES:
+        raise HTTPException(status_code=400, detail="Only PNG, JPEG and WebP are allowed")
+
+    os.makedirs(LOGO_DIR, exist_ok=True)
+    logo_id = uuid.uuid4().hex[:12]
+    ext = os.path.splitext(file.filename or "logo.png")[1] or ".png"
+    dest = os.path.join(LOGO_DIR, f"{logo_id}{ext}")
+
+    size = 0
+    async with aiofiles.open(dest, "wb") as f:
+        while chunk := await file.read(1024 * 1024):
+            size += len(chunk)
+            if size > MAX_LOGO_SIZE:
+                await f.close()
+                os.remove(dest)
+                raise HTTPException(status_code=400, detail="Logo file too large (max 5 MB)")
+            await f.write(chunk)
+
+    r = _redis()
+    await r.hset(f"logo:{logo_id}", mapping={
+        "filename": file.filename or "logo.png",
+        "path": dest,
+        "size": str(size),
+    })
+    await r.aclose()
+
+    return {"logo_id": logo_id, "filename": file.filename, "size": size}
+
+
 @app.post("/process")
 async def process(req: ProcessRequest):
     r = _redis()
@@ -62,11 +99,19 @@ async def process(req: ProcessRequest):
         await r.aclose()
         raise HTTPException(status_code=404, detail="File not found")
 
+    logo_path = None
+    if req.logo_id:
+        logo_data = await r.hgetall(f"logo:{req.logo_id}")
+        if not logo_data:
+            await r.aclose()
+            raise HTTPException(status_code=404, detail="Logo not found")
+        logo_path = logo_data[b"path"].decode()
+
     job_id = uuid.uuid4().hex[:12]
     input_path = file_data[b"path"].decode()
     filename = file_data[b"filename"].decode()
 
-    await r.hset(f"job:{job_id}", mapping={
+    job_mapping = {
         "status": "pending",
         "progress": "0",
         "filename": filename,
@@ -75,7 +120,10 @@ async def process(req: ProcessRequest):
         "wm_position": req.wm_position.value,
         "wm_opacity": str(req.wm_opacity),
         "wm_font_size": str(req.wm_font_size),
-    })
+    }
+    if req.logo_id:
+        job_mapping["logo_id"] = req.logo_id
+    await r.hset(f"job:{job_id}", mapping=job_mapping)
     await r.aclose()
 
     asyncio.create_task(process_video(
@@ -83,6 +131,7 @@ async def process(req: ProcessRequest):
         wm_position=req.wm_position.value,
         wm_opacity=req.wm_opacity,
         wm_font_size=req.wm_font_size,
+        logo_path=logo_path,
     ))
 
     return {

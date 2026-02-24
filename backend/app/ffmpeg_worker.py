@@ -41,15 +41,28 @@ def _build_position(position: str, is_timecode: bool = False):
     return positions.get(position, positions["center"])
 
 
-def _build_vf(client_name: str, position: str = "center",
-              opacity: int = 30, font_size: int = 48) -> str:
-    """Build the -vf filter string for FFmpeg."""
+def _logo_overlay_pos(position: str) -> str:
+    """Return overlay x:y expression for logo placement."""
+    margin = "20"
+    positions = {
+        "center": "(W-w)/2:(H-h)/2",
+        "top-left": f"{margin}:{margin}",
+        "top-right": f"W-w-{margin}:{margin}",
+        "bottom-left": f"{margin}:H-h-{margin}",
+        "bottom-right": f"W-w-{margin}:H-h-{margin}",
+        "diagonal": "(W-w)/2:(H-h)/2",
+    }
+    return positions.get(position, positions["center"])
+
+
+def _build_drawtext(client_name: str, position: str = "center",
+                    opacity: int = 30, font_size: int = 48) -> str:
+    """Build drawtext filter chain (text watermark + timecode)."""
     safe_name = client_name.replace("'", "'\\''").replace(":", "\\:")
     alpha = round(opacity / 100, 2)
     tc_alpha = min(alpha + 0.4, 1.0)
 
     if position == "diagonal":
-        # Repeated diagonal text: 3 lines at 30-degree angle
         lines = []
         offsets = [
             ("(w-text_w)/2", "(h/4-text_h/2)"),
@@ -81,9 +94,34 @@ def _build_vf(client_name: str, position: str = "center",
     return f"{wm_filter},{timecode}"
 
 
+def build_ffmpeg_filter(client_name: str, position: str = "center",
+                        opacity: int = 30, font_size: int = 48,
+                        logo_path: str | None = None):
+    """Return (extra_inputs, filter_flag, filter_value) for FFmpeg command.
+
+    Without logo: returns ([], "-vf", "drawtext...")
+    With logo: returns (["-i", logo_path], "-filter_complex", "...overlay...drawtext...")
+    """
+    drawtext = _build_drawtext(client_name, position, opacity, font_size)
+    alpha = round(opacity / 100, 2)
+
+    if not logo_path:
+        return [], "-vf", drawtext
+
+    overlay_pos = _logo_overlay_pos(position)
+    # Scale logo to max 15% of video width, preserve aspect ratio, apply opacity
+    fc = (
+        f"[1:v]scale='min(iw,main_w*0.15)':-1,format=rgba,"
+        f"colorchannelmixer=aa={alpha}[logo];"
+        f"[0:v][logo]overlay={overlay_pos},"
+        f"{drawtext}"
+    )
+    return ["-i", logo_path], "-filter_complex", fc
+
+
 async def process_video(job_id: str, input_path: str, client_name: str,
                         wm_position: str = "center", wm_opacity: int = 30,
-                        wm_font_size: int = 48):
+                        wm_font_size: int = 48, logo_path: str | None = None):
     r = redis.from_url(REDIS_URL)
 
     try:
@@ -97,11 +135,14 @@ async def process_video(job_id: str, input_path: str, client_name: str,
         hls_dir = os.path.join(HLS_DIR, job_id)
         os.makedirs(hls_dir, exist_ok=True)
 
-        vf = _build_vf(client_name, wm_position, wm_opacity, wm_font_size)
+        extra_inputs, filter_flag, filter_val = build_ffmpeg_filter(
+            client_name, wm_position, wm_opacity, wm_font_size, logo_path
+        )
 
         cmd = [
             "ffmpeg", "-y", "-i", input_path,
-            "-vf", vf,
+            *extra_inputs,
+            filter_flag, filter_val,
             "-c:v", "libx264", "-preset", "ultrafast",
             "-c:a", "aac", "-b:a", "128k",
             "-movflags", "+faststart",
