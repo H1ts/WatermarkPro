@@ -1,18 +1,27 @@
 # WatermarkPro — контекст для Claude
 
-## Что это
-Платформа для нанесения водяных знаков на видео и HLS-стриминга для кинопродакшена.
-PRD: `WatermarkPro_PRD.docx` в корне репозитория.
+## О проекте
+WatermarkPro — веб-платформа для кинопродакшена. Позволяет загрузить видеофайл,
+автоматически наложить персонализированный водяной знак (ФИО клиента + таймкод)
+и выдать защищённую ссылку для просмотра через HLS-стриминг без возможности скачивания.
+
+**Целевая аудитория:** операторы, постпродакшен, продакшен-компании, рентал-хаусы в РФ.
+**Конкуренты:** Frame.io, Kollaborate (дорого, недоступны из РФ). Google/Яндекс.Диск (нет watermark).
+**Бизнес-модель:** Free / Pro (990 руб/мес) / Studio (2990 руб/мес) / Enterprise.
+
+PRD: `WatermarkPro_PRD.docx` в корне репозитория — полная спецификация продукта.
 
 ## Текущий стек
 - Frontend: React 18, vanilla CSS, тёмная тема
 - Backend: FastAPI, Python 3.12, FFmpeg
-- Очередь: Redis 7
+- Очередь/кэш: Redis 7
 - Прокси: Nginx
-- Инфраструктура: Docker Compose
+- Инфраструктура: Docker Compose (4 сервиса: nginx, api, frontend, redis)
 - Плеер: HLS.js
 
-## Что уже реализовано (MVP частично)
+## Текущий этап: MVP (частично готов)
+
+### Готово
 - [x] Drag & drop загрузка видео (базовая, без tus)
 - [x] Текстовый watermark (ФИО клиента, центр кадра, 30% прозрачность)
 - [x] Burn-in таймкод (низ кадра, 25fps)
@@ -20,42 +29,56 @@ PRD: `WatermarkPro_PRD.docx` в корне репозитория.
 - [x] HLS стриминг (базовый, без ABR)
 - [x] HLS-плеер с защитой от правого клика
 - [x] Прогресс обработки (polling каждую секунду)
-- [x] Docker Compose деплой (4 сервиса: nginx, api, frontend, redis)
+- [x] Docker Compose деплой
 - [x] Скрипт деплоя на VPS (deploy.sh)
 - [x] BASE_URL через .env
 - [x] README на русском
+- [x] CLAUDE.md для сохранения контекста
 
-## Что НЕ реализовано (по PRD, в порядке приоритета)
-- [ ] Signed URLs + TTL + лимит просмотров (P0)
-- [ ] Настройки watermark — позиция, прозрачность, тип (P0)
-- [ ] Лого watermark — overlay PNG (P1)
-- [ ] ABR HLS — адаптивный битрейт 360p/720p/1080p (P0)
-- [ ] PostgreSQL для метаданных (P0)
-- [ ] Авторизация / magic link (P0)
-- [ ] WebSocket прогресс вместо polling (P1)
-- [ ] tus protocol — резюмируемая загрузка (P0)
-- [ ] MP4 HQ рендер (slow preset) (P1)
-- [ ] Пакетная загрузка (P1)
-- [ ] Проекты (P1)
-- [ ] Аналитика просмотров (P1)
-- [ ] Оплата ЮКасса/Stripe (P1)
+### Не готово — MVP P0 (критичные для запуска)
+- [ ] Signed URLs + TTL + лимит просмотров — защита ссылок от скачивания
+- [ ] Настройки watermark — позиция (угол/центр/диагональ), прозрачность (20-80%), тип
+- [ ] ABR HLS — адаптивный битрейт 360p/720p/1080p (сейчас только одно качество)
+- [ ] PostgreSQL — для метаданных вместо Redis (users, projects, files, outputs, links, view_logs)
+- [ ] Авторизация / magic link — аккаунты для загрузки (просмотр остаётся без регистрации)
+- [ ] tus protocol — резюмируемая загрузка для больших файлов (до 50 GB)
 
-## VPS
+### Не готово — MVP P1 (важные, но не блокируют запуск)
+- [ ] Лого watermark — overlay PNG поверх видео
+- [ ] MP4 HQ рендер (slow preset, CRF 18)
+- [ ] WebSocket прогресс вместо polling
+- [ ] Пакетная загрузка нескольких файлов
+- [ ] Проекты — группировка файлов
+- [ ] Аналитика просмотров
+- [ ] Оплата ЮКасса/Stripe
+
+### Будущее — v2.0
+- [ ] Review & Comments (таймкодовые комментарии)
+- [ ] Approval workflow
+- [ ] API для интеграций (Resolve / Premiere)
+- [ ] White-label для рентал-хаусов
+- [ ] Telegram-бот (уведомления о рендере)
+- [ ] NVENC / GPU ускорение
+
+## Деплой — VPS
 - IP: 85.198.84.222 (Beget)
-- Путь: /opt/watermarkpro
+- Путь на сервере: /opt/watermarkpro
 - .env: BASE_URL=http://85.198.84.222
+- Статус: деплой начат, нужно дописать .env и запустить docker compose
 
 ## Ключевые файлы
-- `backend/app/main.py` — API эндпоинты
-- `backend/app/ffmpeg_worker.py` — обработка видео
-- `backend/app/models.py` — Pydantic модели
-- `backend/app/config.py` — конфигурация
-- `frontend/src/App.js` — основной React компонент
-- `frontend/src/App.css` — стили
-- `nginx/nginx.conf` — конфигурация прокси
-- `docker-compose.yml` — оркестрация сервисов
-- `deploy.sh` — деплой на VPS
+- `backend/app/main.py` — API эндпоинты (upload, process, status, watch, health)
+- `backend/app/ffmpeg_worker.py` — обработка видео (watermark → MP4 → HLS)
+- `backend/app/models.py` — Pydantic модели (ProcessRequest, JobStatus, JobInfo)
+- `backend/app/config.py` — конфигурация (dirs, redis, base_url)
+- `frontend/src/App.js` — основной React компонент (upload, progress, result)
+- `frontend/src/App.css` — стили (тёмная тема, gradient purple)
+- `nginx/nginx.conf` — маршруты: / → frontend, /api → backend, /hls → статика
+- `docker-compose.yml` — оркестрация 4 сервисов
+- `deploy.sh` — автоматический деплой на Ubuntu/Debian VPS
 
-## Ветки
-- `main` — основная ветка
-- Для работы Claude создавать ветку `claude/*`
+## Правила для Claude
+- Ветка для работы: создавать `claude/*` от main
+- После каждой итерации обновлять этот файл CLAUDE.md
+- PRD лежит в `WatermarkPro_PRD.docx` — сверяться с ним при реализации фич
+- Язык интерфейса и документации: русский
