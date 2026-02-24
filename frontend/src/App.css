@@ -164,32 +164,44 @@ body {
   margin-bottom: 8px;
 }
 
-.wm-positions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.wm-pos-btn {
-  padding: 6px 12px;
+/* Position preview (draggable) */
+.wm-preview {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #1a1a2e;
   border: 1px solid #2a2a3e;
   border-radius: 6px;
-  background: #0a0a0f;
-  color: #8b8ba0;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
+  cursor: crosshair;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
 }
 
-.wm-pos-btn:hover {
-  border-color: #7c3aed;
-  color: #e2e2e8;
+.wm-preview-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
 }
 
-.wm-pos-btn--active {
-  border-color: #7c3aed;
-  background: #1e1b4b;
-  color: #a78bfa;
+.wm-preview-text {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+
+.wm-preview-logo {
+  max-width: 48px;
+  max-height: 32px;
+  object-fit: contain;
+  opacity: 0.6;
 }
 
 .wm-slider {

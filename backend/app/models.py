@@ -10,22 +10,15 @@ class JobStatus(str, Enum):
     ERROR = "error"
 
 
-class WatermarkPosition(str, Enum):
-    CENTER = "center"
-    TOP_LEFT = "top-left"
-    TOP_RIGHT = "top-right"
-    BOTTOM_LEFT = "bottom-left"
-    BOTTOM_RIGHT = "bottom-right"
-    DIAGONAL = "diagonal"
-
-
 class ProcessRequest(BaseModel):
     file_id: str
     client_name: str
-    wm_position: WatermarkPosition = WatermarkPosition.CENTER
+    wm_x: float = Field(default=50.0, ge=0, le=100)
+    wm_y: float = Field(default=50.0, ge=0, le=100)
     wm_opacity: int = Field(default=30, ge=20, le=80)
     wm_font_size: int = Field(default=48, ge=16, le=120)
     logo_id: Optional[str] = None
+    logo_scale: int = Field(default=25, ge=10, le=50)
 
 
 class JobInfo(BaseModel):

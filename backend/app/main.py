@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 
 from .config import UPLOAD_DIR, OUTPUT_DIR, HLS_DIR, REDIS_URL, BASE_URL
-from .models import ProcessRequest, JobInfo, JobStatus
+from .models import ProcessRequest, JobInfo, JobStatus  # noqa: F401
 from .ffmpeg_worker import process_video
 
 app = FastAPI(title="WatermarkPro API", version="0.1.0")
@@ -117,9 +117,11 @@ async def process(req: ProcessRequest):
         "filename": filename,
         "client_name": req.client_name,
         "file_id": req.file_id,
-        "wm_position": req.wm_position.value,
+        "wm_x": str(req.wm_x),
+        "wm_y": str(req.wm_y),
         "wm_opacity": str(req.wm_opacity),
         "wm_font_size": str(req.wm_font_size),
+        "logo_scale": str(req.logo_scale),
     }
     if req.logo_id:
         job_mapping["logo_id"] = req.logo_id
@@ -128,10 +130,12 @@ async def process(req: ProcessRequest):
 
     asyncio.create_task(process_video(
         job_id, input_path, req.client_name,
-        wm_position=req.wm_position.value,
+        wm_x=req.wm_x,
+        wm_y=req.wm_y,
         wm_opacity=req.wm_opacity,
         wm_font_size=req.wm_font_size,
         logo_path=logo_path,
+        logo_scale=req.logo_scale,
     ))
 
     return {

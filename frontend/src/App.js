@@ -6,11 +6,13 @@ const API = '/api';
 function App() {
   const [file, setFile] = useState(null);
   const [clientName, setClientName] = useState('');
-  const [wmPosition, setWmPosition] = useState('center');
+  const [wmX, setWmX] = useState(50);
+  const [wmY, setWmY] = useState(50);
   const [wmOpacity, setWmOpacity] = useState(30);
   const [wmFontSize, setWmFontSize] = useState(48);
   const [logoFile, setLogoFile] = useState(null);
   const [logoId, setLogoId] = useState(null);
+  const [logoScale, setLogoScale] = useState(25);
   const [logoUploading, setLogoUploading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -22,15 +24,8 @@ function App() {
   const [error, setError] = useState(null);
   const [dragOver, setDragOver] = useState(false);
   const pollRef = useRef(null);
-
-  const positionLabels = {
-    'center': 'Центр',
-    'top-left': 'Верх-лево',
-    'top-right': 'Верх-право',
-    'bottom-left': 'Низ-лево',
-    'bottom-right': 'Низ-право',
-    'diagonal': 'Диагональ',
-  };
+  const previewRef = useRef(null);
+  const draggingRef = useRef(false);
 
   const resetState = () => {
     setFile(null);
@@ -78,6 +73,44 @@ function App() {
     setLogoFile(null);
     setLogoId(null);
   };
+
+  // Draggable position preview
+  const updatePosition = useCallback((e) => {
+    const rect = previewRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const x = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100));
+    setWmX(Math.round(x));
+    setWmY(Math.round(y));
+  }, []);
+
+  const onPreviewMouseDown = useCallback((e) => {
+    e.preventDefault();
+    draggingRef.current = true;
+    updatePosition(e);
+  }, [updatePosition]);
+
+  const onPreviewMouseMove = useCallback((e) => {
+    if (!draggingRef.current) return;
+    e.preventDefault();
+    updatePosition(e);
+  }, [updatePosition]);
+
+  const onPreviewMouseUp = useCallback(() => {
+    draggingRef.current = false;
+  }, []);
+
+  useEffect(() => {
+    const handleUp = () => { draggingRef.current = false; };
+    window.addEventListener('mouseup', handleUp);
+    window.addEventListener('touchend', handleUp);
+    return () => {
+      window.removeEventListener('mouseup', handleUp);
+      window.removeEventListener('touchend', handleUp);
+    };
+  }, []);
 
   const handleDrop = useCallback((e) => {
     e.preventDefault();
@@ -147,10 +180,12 @@ function App() {
         body: JSON.stringify({
           file_id: result.file_id,
           client_name: clientName.trim(),
-          wm_position: wmPosition,
+          wm_x: wmX,
+          wm_y: wmY,
           wm_opacity: wmOpacity,
           wm_font_size: wmFontSize,
           ...(logoId && { logo_id: logoId }),
+          logo_scale: logoScale,
         }),
       });
       const procData = await procRes.json();
@@ -249,18 +284,32 @@ function App() {
               <h3 className="wm-settings-title">Настройки watermark</h3>
 
               <div className="wm-row">
-                <label>Позиция</label>
-                <div className="wm-positions">
-                  {Object.entries(positionLabels).map(([value, label]) => (
-                    <button
-                      key={value}
-                      type="button"
-                      className={`wm-pos-btn ${wmPosition === value ? 'wm-pos-btn--active' : ''}`}
-                      onClick={() => setWmPosition(value)}
-                    >
-                      {label}
-                    </button>
-                  ))}
+                <label>Позиция (перетащите метку)</label>
+                <div
+                  className="wm-preview"
+                  ref={previewRef}
+                  onMouseDown={onPreviewMouseDown}
+                  onMouseMove={onPreviewMouseMove}
+                  onMouseUp={onPreviewMouseUp}
+                  onTouchStart={onPreviewMouseDown}
+                  onTouchMove={onPreviewMouseMove}
+                  onTouchEnd={onPreviewMouseUp}
+                >
+                  <div
+                    className="wm-preview-marker"
+                    style={{ left: `${wmX}%`, top: `${wmY}%` }}
+                  >
+                    <span className="wm-preview-text">
+                      {clientName.trim() || 'ФИО'}
+                    </span>
+                    {logoFile && (
+                      <img
+                        src={URL.createObjectURL(logoFile)}
+                        alt=""
+                        className="wm-preview-logo"
+                      />
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -328,6 +377,24 @@ function App() {
                   hidden
                 />
               </div>
+
+              {logoFile && (
+                <div className="wm-row">
+                  <label>Масштаб лого: {logoScale}%</label>
+                  <input
+                    type="range"
+                    min="10"
+                    max="50"
+                    value={logoScale}
+                    onChange={(e) => setLogoScale(Number(e.target.value))}
+                    className="wm-slider"
+                  />
+                  <div className="wm-range-labels">
+                    <span>10%</span>
+                    <span>50%</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             <button
