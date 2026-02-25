@@ -1,15 +1,20 @@
 import asyncio
 import os
 import uuid
+from datetime import datetime, timezone
 
 import aiofiles
 import redis.asyncio as redis
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 
 from .config import UPLOAD_DIR, OUTPUT_DIR, HLS_DIR, REDIS_URL, BASE_URL
-from .models import ProcessRequest, JobInfo, JobStatus
+from .models import (  # noqa: F401
+    ProcessRequest, JobInfo, JobStatus,
+    CreateProjectRequest, ProjectInfo, ProjectDetail,
+    CreateCommentRequest, UpdateCommentRequest, CommentInfo,
+)
 from .ffmpeg_worker import process_video
 
 app = FastAPI(title="WatermarkPro API", version="0.1.0")
@@ -33,6 +38,99 @@ async def startup():
         os.makedirs(d, exist_ok=True)
 
 
+# ── Projects ──────────────────────────────────────────────────────────
+
+@app.post("/projects")
+async def create_project(req: CreateProjectRequest):
+    project_id = uuid.uuid4().hex[:12]
+    now = datetime.now(timezone.utc).isoformat()
+    r = _redis()
+    await r.hset(f"project:{project_id}", mapping={
+        "name": req.name,
+        "created_at": now,
+    })
+    await r.sadd("projects", project_id)
+    await r.aclose()
+    return ProjectInfo(id=project_id, name=req.name, created_at=now, job_count=0)
+
+
+@app.get("/projects")
+async def list_projects():
+    r = _redis()
+    project_ids = await r.smembers("projects")
+    projects = []
+    for pid_bytes in project_ids:
+        pid = pid_bytes.decode() if isinstance(pid_bytes, bytes) else pid_bytes
+        data = await r.hgetall(f"project:{pid}")
+        if not data:
+            continue
+        job_count = await r.scard(f"project:{pid}:jobs")
+        projects.append(ProjectInfo(
+            id=pid,
+            name=data.get(b"name", b"").decode(),
+            created_at=data.get(b"created_at", b"").decode(),
+            job_count=job_count,
+        ))
+    await r.aclose()
+    projects.sort(key=lambda p: p.created_at, reverse=True)
+    return projects
+
+
+@app.get("/projects/{project_id}")
+async def get_project(project_id: str):
+    r = _redis()
+    data = await r.hgetall(f"project:{project_id}")
+    if not data:
+        await r.aclose()
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    job_ids = await r.smembers(f"project:{project_id}:jobs")
+    jobs = []
+    for jid_bytes in job_ids:
+        jid = jid_bytes.decode() if isinstance(jid_bytes, bytes) else jid_bytes
+        jdata = await r.hgetall(f"job:{jid}")
+        if not jdata:
+            continue
+        status_val = jdata.get(b"status", b"pending").decode()
+        is_done = status_val == "done"
+        jobs.append(JobInfo(
+            id=jid,
+            status=JobStatus(status_val),
+            progress=int(jdata.get(b"progress", b"0").decode()),
+            filename=jdata.get(b"filename", b"").decode() or None,
+            client_name=jdata.get(b"client_name", b"").decode() or None,
+            watch_url=f"{BASE_URL}/watch/{jid}" if is_done else None,
+            download_url=f"{BASE_URL}/api/download/{jid}" if is_done else None,
+            codec=jdata.get(b"codec", b"mp4").decode(),
+            error=jdata.get(b"error", b"").decode() or None,
+        ))
+    await r.aclose()
+
+    jobs.sort(key=lambda j: j.id, reverse=True)
+    return ProjectDetail(
+        id=project_id,
+        name=data.get(b"name", b"").decode(),
+        created_at=data.get(b"created_at", b"").decode(),
+        jobs=jobs,
+    )
+
+
+@app.delete("/projects/{project_id}")
+async def delete_project(project_id: str):
+    r = _redis()
+    exists = await r.exists(f"project:{project_id}")
+    if not exists:
+        await r.aclose()
+        raise HTTPException(status_code=404, detail="Project not found")
+    await r.delete(f"project:{project_id}")
+    await r.srem("projects", project_id)
+    await r.delete(f"project:{project_id}:jobs")
+    await r.aclose()
+    return {"ok": True}
+
+
+# ── File upload ───────────────────────────────────────────────────────
+
 @app.post("/upload")
 async def upload_video(file: UploadFile = File(...)):
     file_id = uuid.uuid4().hex[:12]
@@ -54,6 +152,43 @@ async def upload_video(file: UploadFile = File(...)):
     return {"file_id": file_id, "filename": file.filename, "size": os.path.getsize(dest)}
 
 
+LOGO_DIR = os.path.join(UPLOAD_DIR, "logos")
+
+ALLOWED_LOGO_TYPES = {"image/png", "image/jpeg", "image/webp"}
+MAX_LOGO_SIZE = 5 * 1024 * 1024  # 5 MB
+
+
+@app.post("/upload-logo")
+async def upload_logo(file: UploadFile = File(...)):
+    if file.content_type not in ALLOWED_LOGO_TYPES:
+        raise HTTPException(status_code=400, detail="Only PNG, JPEG and WebP are allowed")
+
+    os.makedirs(LOGO_DIR, exist_ok=True)
+    logo_id = uuid.uuid4().hex[:12]
+    ext = os.path.splitext(file.filename or "logo.png")[1] or ".png"
+    dest = os.path.join(LOGO_DIR, f"{logo_id}{ext}")
+
+    size = 0
+    async with aiofiles.open(dest, "wb") as f:
+        while chunk := await file.read(1024 * 1024):
+            size += len(chunk)
+            if size > MAX_LOGO_SIZE:
+                await f.close()
+                os.remove(dest)
+                raise HTTPException(status_code=400, detail="Logo file too large (max 5 MB)")
+            await f.write(chunk)
+
+    r = _redis()
+    await r.hset(f"logo:{logo_id}", mapping={
+        "filename": file.filename or "logo.png",
+        "path": dest,
+        "size": str(size),
+    })
+    await r.aclose()
+
+    return {"logo_id": logo_id, "filename": file.filename, "size": size}
+
+
 @app.post("/process")
 async def process(req: ProcessRequest):
     r = _redis()
@@ -62,20 +197,52 @@ async def process(req: ProcessRequest):
         await r.aclose()
         raise HTTPException(status_code=404, detail="File not found")
 
+    logo_path = None
+    if req.logo_id:
+        logo_data = await r.hgetall(f"logo:{req.logo_id}")
+        if not logo_data:
+            await r.aclose()
+            raise HTTPException(status_code=404, detail="Logo not found")
+        logo_path = logo_data[b"path"].decode()
+
     job_id = uuid.uuid4().hex[:12]
     input_path = file_data[b"path"].decode()
     filename = file_data[b"filename"].decode()
 
-    await r.hset(f"job:{job_id}", mapping={
+    job_mapping = {
         "status": "pending",
         "progress": "0",
         "filename": filename,
         "client_name": req.client_name,
         "file_id": req.file_id,
-    })
+        "wm_x": str(req.wm_x),
+        "wm_y": str(req.wm_y),
+        "wm_opacity": str(req.wm_opacity),
+        "wm_font_size": str(req.wm_font_size),
+        "logo_scale": str(req.logo_scale),
+        "quality": req.quality,
+        "codec": req.codec,
+    }
+    if req.logo_id:
+        job_mapping["logo_id"] = req.logo_id
+    if req.project_id:
+        job_mapping["project_id"] = req.project_id
+    await r.hset(f"job:{job_id}", mapping=job_mapping)
+    if req.project_id:
+        await r.sadd(f"project:{req.project_id}:jobs", job_id)
     await r.aclose()
 
-    asyncio.create_task(process_video(job_id, input_path, req.client_name))
+    asyncio.create_task(process_video(
+        job_id, input_path, req.client_name,
+        wm_x=req.wm_x,
+        wm_y=req.wm_y,
+        wm_opacity=req.wm_opacity,
+        wm_font_size=req.wm_font_size,
+        logo_path=logo_path,
+        logo_scale=req.logo_scale,
+        quality=req.quality,
+        codec=req.codec,
+    ))
 
     return {
         "job_id": job_id,
@@ -93,14 +260,53 @@ async def status(job_id: str):
     if not data:
         raise HTTPException(status_code=404, detail="Job not found")
 
+    is_done = data.get(b"status") == b"done"
     return JobInfo(
         id=job_id,
         status=JobStatus(data.get(b"status", b"pending").decode()),
         progress=int(data.get(b"progress", b"0").decode()),
         filename=data.get(b"filename", b"").decode() or None,
         client_name=data.get(b"client_name", b"").decode() or None,
-        watch_url=f"{BASE_URL}/watch/{job_id}" if data.get(b"status") == b"done" else None,
+        watch_url=f"{BASE_URL}/watch/{job_id}" if is_done else None,
+        download_url=f"{BASE_URL}/api/download/{job_id}" if is_done else None,
+        codec=data.get(b"codec", b"mp4").decode(),
+        fps=int(data.get(b"fps", b"25").decode()),
         error=data.get(b"error", b"").decode() or None,
+    )
+
+
+@app.get("/download/{job_id}")
+async def download(job_id: str):
+    r = _redis()
+    data = await r.hgetall(f"job:{job_id}")
+    await r.aclose()
+
+    if not data:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    if data.get(b"status", b"").decode() != "done":
+        raise HTTPException(status_code=400, detail="Video is still processing")
+
+    job_codec = data.get(b"codec", b"mp4").decode()
+    ext = ".mov" if job_codec == "mov" else ".mp4"
+    output_path = os.path.join(OUTPUT_DIR, f"{job_id}{ext}")
+    if not os.path.isfile(output_path):
+        # fallback: try the other extension
+        alt_ext = ".mp4" if ext == ".mov" else ".mov"
+        output_path = os.path.join(OUTPUT_DIR, f"{job_id}{alt_ext}")
+        ext = alt_ext
+    if not os.path.isfile(output_path):
+        raise HTTPException(status_code=404, detail="File not found on disk")
+
+    filename = data.get(b"filename", b"video").decode()
+    base = os.path.splitext(filename)[0]
+    filename = base + ext
+    media_type = "video/quicktime" if ext == ".mov" else "video/mp4"
+
+    return FileResponse(
+        output_path,
+        media_type=media_type,
+        filename=filename,
     )
 
 
@@ -167,6 +373,97 @@ async def watch(job_id: str):
     </script>
 </body>
 </html>""")
+
+
+# ── Comments (review) ────────────────────────────────────────────────
+
+@app.post("/comments")
+async def create_comment(req: CreateCommentRequest):
+    import json as _json
+    comment_id = uuid.uuid4().hex[:12]
+    now = datetime.now(timezone.utc).isoformat()
+    r = _redis()
+    await r.hset(f"comment:{comment_id}", mapping={
+        "job_id": req.job_id,
+        "author_name": req.author_name,
+        "text": req.text,
+        "timecode": str(req.timecode),
+        "drawing": _json.dumps(req.drawing),
+        "resolved": "0",
+        "created_at": now,
+    })
+    await r.sadd(f"job:{req.job_id}:comments", comment_id)
+    await r.aclose()
+    return CommentInfo(
+        id=comment_id, job_id=req.job_id,
+        author_name=req.author_name, text=req.text,
+        timecode=req.timecode, drawing=req.drawing,
+        resolved=False, created_at=now,
+    )
+
+
+@app.get("/comments/{job_id}")
+async def list_comments(job_id: str):
+    import json as _json
+    r = _redis()
+    comment_ids = await r.smembers(f"job:{job_id}:comments")
+    comments = []
+    for cid_bytes in comment_ids:
+        cid = cid_bytes.decode() if isinstance(cid_bytes, bytes) else cid_bytes
+        data = await r.hgetall(f"comment:{cid}")
+        if not data:
+            continue
+        drawing_raw = data.get(b"drawing", b"[]").decode()
+        try:
+            drawing = _json.loads(drawing_raw)
+        except _json.JSONDecodeError:
+            drawing = []
+        comments.append(CommentInfo(
+            id=cid,
+            job_id=data.get(b"job_id", b"").decode(),
+            author_name=data.get(b"author_name", b"").decode() or "Аноним",
+            text=data.get(b"text", b"").decode(),
+            timecode=float(data.get(b"timecode", b"0").decode()),
+            drawing=drawing,
+            resolved=data.get(b"resolved", b"0").decode() == "1",
+            created_at=data.get(b"created_at", b"").decode(),
+        ))
+    await r.aclose()
+    comments.sort(key=lambda c: c.timecode)
+    return comments
+
+
+@app.patch("/comments/{comment_id}")
+async def update_comment(comment_id: str, req: UpdateCommentRequest):
+    r = _redis()
+    exists = await r.exists(f"comment:{comment_id}")
+    if not exists:
+        await r.aclose()
+        raise HTTPException(status_code=404, detail="Comment not found")
+    updates = {}
+    if req.resolved is not None:
+        updates["resolved"] = "1" if req.resolved else "0"
+    if req.text is not None:
+        updates["text"] = req.text
+    if updates:
+        await r.hset(f"comment:{comment_id}", mapping=updates)
+    await r.aclose()
+    return {"ok": True}
+
+
+@app.delete("/comments/{comment_id}")
+async def delete_comment(comment_id: str):
+    r = _redis()
+    data = await r.hgetall(f"comment:{comment_id}")
+    if not data:
+        await r.aclose()
+        raise HTTPException(status_code=404, detail="Comment not found")
+    job_id = data.get(b"job_id", b"").decode()
+    await r.delete(f"comment:{comment_id}")
+    if job_id:
+        await r.srem(f"job:{job_id}:comments", comment_id)
+    await r.aclose()
+    return {"ok": True}
 
 
 @app.get("/health")
