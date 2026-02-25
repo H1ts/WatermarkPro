@@ -937,6 +937,7 @@ body {
 .review-player-wrap {
   position: relative;
   flex: 1;
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -948,14 +949,14 @@ body {
   width: 100%;
   max-height: 100%;
   display: block;
+  object-fit: contain;
 }
 
 .review-canvas {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 /* ── Timeline ────────────────────────────────────────────────────── */
@@ -988,10 +989,14 @@ body {
 }
 
 .review-timeline-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
   height: 100%;
   background: #7c3aed;
   border-radius: 3px;
   pointer-events: none;
+  transition: width 0.15s linear;
 }
 
 .review-timeline-marker {

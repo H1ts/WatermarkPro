@@ -151,6 +151,14 @@ function ReviewPage() {
       const hls = new Hls();
       hls.loadSource(src);
       hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        // Duration available after manifest is parsed
+        setTimeout(() => {
+          if (video.duration && isFinite(video.duration)) {
+            setDuration(video.duration);
+          }
+        }, 200);
+      });
       hlsRef.current = hls;
       return () => { hls.destroy(); hlsRef.current = null; };
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -162,17 +170,29 @@ function ReviewPage() {
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    const onTime = () => setCurrentTime(v.currentTime);
-    const onDur = () => setDuration(v.duration || 0);
+    const onTime = () => {
+      setCurrentTime(v.currentTime);
+      // HLS sometimes only exposes duration after playback starts
+      if (v.duration && isFinite(v.duration) && v.duration > 0) {
+        setDuration(v.duration);
+      }
+    };
+    const onDur = () => {
+      if (v.duration && isFinite(v.duration)) setDuration(v.duration);
+    };
     const onPlay = () => { setPaused(false); setActiveComment(null); };
     const onPause = () => setPaused(true);
     v.addEventListener('timeupdate', onTime);
     v.addEventListener('durationchange', onDur);
+    v.addEventListener('loadedmetadata', onDur);
+    v.addEventListener('loadeddata', onDur);
     v.addEventListener('play', onPlay);
     v.addEventListener('pause', onPause);
     return () => {
       v.removeEventListener('timeupdate', onTime);
       v.removeEventListener('durationchange', onDur);
+      v.removeEventListener('loadedmetadata', onDur);
+      v.removeEventListener('loadeddata', onDur);
       v.removeEventListener('play', onPlay);
       v.removeEventListener('pause', onPause);
     };
@@ -181,15 +201,20 @@ function ReviewPage() {
   /* ── Canvas resize ─────────────────────────────────────────────── */
   useEffect(() => {
     const wrap = wrapRef.current;
-    if (!wrap) return;
+    const v = videoRef.current;
+    if (!wrap || !v) return;
     const sync = () => {
-      const v = videoRef.current;
-      if (v) setCanvasSize({ w: v.clientWidth, h: v.clientHeight });
+      setCanvasSize({ w: v.clientWidth, h: v.clientHeight });
     };
     sync();
     const ro = new ResizeObserver(sync);
     ro.observe(wrap);
-    return () => ro.disconnect();
+    // Also sync when video metadata loads (dimensions become known)
+    v.addEventListener('loadeddata', sync);
+    return () => {
+      ro.disconnect();
+      v.removeEventListener('loadeddata', sync);
+    };
   }, [loading, jobInfo]);
 
   /* ── Render canvas ─────────────────────────────────────────────── */
@@ -409,6 +434,8 @@ function ReviewPage() {
               width={canvasSize.w}
               height={canvasSize.h}
               style={{
+                width: canvasSize.w,
+                height: canvasSize.h,
                 pointerEvents: drawActive ? 'auto' : 'none',
                 cursor: drawActive ? 'crosshair' : 'default',
               }}
