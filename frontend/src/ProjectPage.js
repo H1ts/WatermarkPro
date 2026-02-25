@@ -555,7 +555,7 @@ function ProjectPage() {
               </a>
               {downloadUrl && (
                 <a href={downloadUrl} download className="btn-download">
-                  Скачать MP4
+                  Скачать {codec.toUpperCase()}
                 </a>
               )}
             </div>
@@ -589,7 +589,7 @@ function ProjectPage() {
                   {job.status === 'done' && (
                     <>
                       <a href={job.download_url} download className="job-card-link job-card-download">
-                        Скачать
+                        Скачать {(job.codec || 'mp4').toUpperCase()}
                       </a>
                       <a href={job.watch_url} target="_blank" rel="noopener noreferrer" className="job-card-link">
                         Смотреть

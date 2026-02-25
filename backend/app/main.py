@@ -100,6 +100,7 @@ async def get_project(project_id: str):
             client_name=jdata.get(b"client_name", b"").decode() or None,
             watch_url=f"{BASE_URL}/watch/{jid}" if is_done else None,
             download_url=f"{BASE_URL}/api/download/{jid}" if is_done else None,
+            codec=jdata.get(b"codec", b"mp4").decode(),
             error=jdata.get(b"error", b"").decode() or None,
         ))
     await r.aclose()
@@ -267,6 +268,7 @@ async def status(job_id: str):
         client_name=data.get(b"client_name", b"").decode() or None,
         watch_url=f"{BASE_URL}/watch/{job_id}" if is_done else None,
         download_url=f"{BASE_URL}/api/download/{job_id}" if is_done else None,
+        codec=data.get(b"codec", b"mp4").decode(),
         error=data.get(b"error", b"").decode() or None,
     )
 

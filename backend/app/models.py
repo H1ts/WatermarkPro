@@ -32,6 +32,7 @@ class JobInfo(BaseModel):
     client_name: Optional[str] = None
     watch_url: Optional[str] = None
     download_url: Optional[str] = None
+    codec: Optional[str] = None
     error: Optional[str] = None
 
 
