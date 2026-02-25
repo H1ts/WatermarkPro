@@ -1,5 +1,8 @@
 import asyncio
+import hashlib
+import hmac
 import os
+import secrets
 import uuid
 from datetime import datetime, timezone
 
@@ -13,9 +16,12 @@ from .config import UPLOAD_DIR, OUTPUT_DIR, HLS_DIR, REDIS_URL, BASE_URL
 from .models import (  # noqa: F401
     ProcessRequest, JobInfo, JobStatus,
     CreateProjectRequest, ProjectInfo, ProjectDetail,
+    SetPasswordRequest, VerifyPasswordRequest,
     CreateCommentRequest, UpdateCommentRequest, CommentInfo,
 )
 from .ffmpeg_worker import process_video
+
+HLS_SECRET = os.environ.get("HLS_SECRET", secrets.token_hex(32))
 
 app = FastAPI(title="WatermarkPro API", version="0.1.0")
 
@@ -103,6 +109,7 @@ async def get_project(project_id: str):
             share_url=f"{BASE_URL}/share/{jid}" if is_done else None,
             download_url=f"{BASE_URL}/api/download/{jid}" if is_done else None,
             codec=jdata.get(b"codec", b"mp4").decode(),
+            has_password=bool(jdata.get(b"share_password_hash", b"").decode()),
             error=jdata.get(b"error", b"").decode() or None,
         ))
     await r.aclose()
@@ -274,6 +281,7 @@ async def status(job_id: str):
         download_url=f"{BASE_URL}/api/download/{job_id}" if is_done else None,
         codec=data.get(b"codec", b"mp4").decode(),
         fps=int(data.get(b"fps", b"25").decode()),
+        has_password=bool(data.get(b"share_password_hash", b"").decode()),
         error=data.get(b"error", b"").decode() or None,
     )
 
@@ -376,6 +384,58 @@ async def watch(job_id: str):
     </script>
 </body>
 </html>""")
+
+
+# ── Share password ───────────────────────────────────────────────────
+
+def _hash_password(pw: str) -> str:
+    return hashlib.sha256(pw.encode()).hexdigest()
+
+
+@app.post("/share/{job_id}/password")
+async def set_share_password(job_id: str, req: SetPasswordRequest):
+    r = _redis()
+    exists = await r.exists(f"job:{job_id}")
+    if not exists:
+        await r.aclose()
+        raise HTTPException(status_code=404, detail="Job not found")
+    if req.password:
+        await r.hset(f"job:{job_id}", "share_password_hash", _hash_password(req.password))
+    else:
+        await r.hdel(f"job:{job_id}", "share_password_hash")
+    await r.aclose()
+    return {"ok": True, "has_password": bool(req.password)}
+
+
+@app.post("/share/{job_id}/verify")
+async def verify_share_password(job_id: str, req: VerifyPasswordRequest):
+    r = _redis()
+    data = await r.hgetall(f"job:{job_id}")
+    await r.aclose()
+    if not data:
+        raise HTTPException(status_code=404, detail="Job not found")
+    stored_hash = data.get(b"share_password_hash", b"").decode()
+    if not stored_hash:
+        return {"ok": True, "token": "open"}
+    if _hash_password(req.password) != stored_hash:
+        raise HTTPException(status_code=403, detail="Неверный пароль")
+    token = secrets.token_urlsafe(32)
+    r2 = _redis()
+    await r2.setex(f"share_token:{job_id}:{token}", 3600, "1")
+    await r2.aclose()
+    return {"ok": True, "token": token}
+
+
+@app.get("/share/{job_id}/check")
+async def check_share_access(job_id: str):
+    """Проверяет, нужен ли пароль для данного job."""
+    r = _redis()
+    data = await r.hgetall(f"job:{job_id}")
+    await r.aclose()
+    if not data:
+        raise HTTPException(status_code=404, detail="Job not found")
+    has_pw = bool(data.get(b"share_password_hash", b"").decode())
+    return {"has_password": has_pw}
 
 
 # ── Comments (review) ────────────────────────────────────────────────

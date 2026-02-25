@@ -35,6 +35,7 @@ class JobInfo(BaseModel):
     download_url: Optional[str] = None
     codec: Optional[str] = None
     fps: int = 25
+    has_password: bool = False
     error: Optional[str] = None
 
 
@@ -54,6 +55,16 @@ class ProjectDetail(BaseModel):
     name: str
     created_at: str
     jobs: List[JobInfo] = []
+
+
+# ── Share password ────────────────────────────────────────────────────
+
+class SetPasswordRequest(BaseModel):
+    password: Optional[str] = Field(default=None, max_length=200)
+
+
+class VerifyPasswordRequest(BaseModel):
+    password: str = Field(max_length=200)
 
 
 # ── Comments (review) ─────────────────────────────────────────────────

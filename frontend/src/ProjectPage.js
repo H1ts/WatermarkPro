@@ -3,6 +3,49 @@ import { useParams, useNavigate } from 'react-router-dom';
 
 const API = '/api';
 
+function SharePasswordSetter({ jobId }) {
+  const [password, setPassword] = useState('');
+  const [saved, setSaved] = useState(false);
+  const [hasPassword, setHasPassword] = useState(false);
+
+  useEffect(() => {
+    fetch(`${API}/share/${jobId}/check`)
+      .then(r => r.json())
+      .then(d => setHasPassword(d.has_password))
+      .catch(() => {});
+  }, [jobId]);
+
+  const save = async () => {
+    const res = await fetch(`${API}/share/${jobId}/password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: password || null }),
+    });
+    if (res.ok) {
+      setSaved(true);
+      setHasPassword(!!password);
+      setTimeout(() => setSaved(false), 2000);
+    }
+  };
+
+  return (
+    <div className="share-password-setter">
+      <label className="share-pw-label">
+        {hasPassword ? 'Пароль установлен' : 'Установить пароль (необязательно)'}
+      </label>
+      <div className="link-box">
+        <input
+          type="text"
+          placeholder={hasPassword ? 'Новый пароль (пусто = снять)' : 'Пароль для ссылки'}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <button onClick={save}>{saved ? 'Сохранено!' : 'Сохранить'}</button>
+      </div>
+    </div>
+  );
+}
+
 function ProjectPage() {
   const { projectId } = useParams();
   const navigate = useNavigate();
@@ -567,6 +610,7 @@ function ProjectPage() {
               <input readOnly value={shareUrl || watchUrl} onClick={(e) => e.target.select()} />
               <button onClick={() => navigator.clipboard.writeText(shareUrl || watchUrl)}>Копировать</button>
             </div>
+            <SharePasswordSetter jobId={jobId} />
             <button className="btn-new" onClick={resetForm}>Загрузить ещё</button>
           </div>
         )}

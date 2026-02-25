@@ -119,17 +119,64 @@ function ReviewPage({ shareMode = false }) {
   const [activeComment, setActiveComment] = useState(null);
   const [showForm, setShowForm] = useState(false);
 
+  // Password protection (share mode)
+  const [needsPassword, setNeedsPassword] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [unlocked, setUnlocked] = useState(false);
+
   /* ── Fetch job ─────────────────────────────────────────────────── */
   useEffect(() => {
     (async () => {
       try {
+        // В shareMode сначала проверяем, нужен ли пароль
+        if (shareMode) {
+          const checkRes = await fetch(`${API}/share/${jobId}/check`);
+          if (checkRes.ok) {
+            const checkData = await checkRes.json();
+            if (checkData.has_password) {
+              // Проверяем сохранённый токен
+              const savedToken = sessionStorage.getItem(`wmpro_share_${jobId}`);
+              if (!savedToken) {
+                setNeedsPassword(true);
+                setLoading(false);
+                return;
+              }
+            }
+          }
+        }
         const res = await fetch(`${API}/status/${jobId}`);
         if (!res.ok) throw new Error();
         setJobInfo(await res.json());
+        setUnlocked(true);
       } catch { /* ignore */ }
       setLoading(false);
     })();
-  }, [jobId]);
+  }, [jobId, shareMode]);
+
+  const verifyPassword = async () => {
+    setPasswordError('');
+    try {
+      const res = await fetch(`${API}/share/${jobId}/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: passwordInput }),
+      });
+      if (!res.ok) {
+        setPasswordError('Неверный пароль');
+        return;
+      }
+      const data = await res.json();
+      sessionStorage.setItem(`wmpro_share_${jobId}`, data.token);
+      setNeedsPassword(false);
+      setUnlocked(true);
+      // Теперь загружаем данные видео
+      const statusRes = await fetch(`${API}/status/${jobId}`);
+      if (statusRes.ok) setJobInfo(await statusRes.json());
+    } catch {
+      setPasswordError('Ошибка проверки пароля');
+    }
+  };
 
   /* ── Fetch comments ────────────────────────────────────────────── */
   const fetchComments = useCallback(async () => {
@@ -388,6 +435,33 @@ function ReviewPage({ shareMode = false }) {
     return (
       <div className="app">
         <div className="review-loading"><div className="spinner" /></div>
+      </div>
+    );
+  }
+
+  if (needsPassword && !unlocked) {
+    return (
+      <div className="app">
+        <div className="share-password-page">
+          <div className="share-password-card">
+            <span className="share-password-icon">&#128274;</span>
+            <h2>Видео защищено паролем</h2>
+            <p className="share-password-hint">Введите пароль для просмотра</p>
+            <input
+              type="password"
+              className="share-password-input"
+              placeholder="Пароль"
+              value={passwordInput}
+              onChange={(e) => setPasswordInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && verifyPassword()}
+              autoFocus
+            />
+            {passwordError && <p className="share-password-error">{passwordError}</p>}
+            <button className="btn-process" onClick={verifyPassword} disabled={!passwordInput}>
+              Войти
+            </button>
+          </div>
+        </div>
       </div>
     );
   }

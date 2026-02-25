@@ -1427,6 +1427,77 @@ body {
   border-color: #7f1d1d;
 }
 
+/* ── Share password page ──────────────────────────────────────────── */
+
+.share-password-page {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+.share-password-card {
+  text-align: center;
+  padding: 40px;
+  background: #12121a;
+  border: 1px solid #2a2a3e;
+  border-radius: 16px;
+  max-width: 380px;
+  width: 100%;
+}
+
+.share-password-icon {
+  font-size: 48px;
+  display: block;
+  margin-bottom: 16px;
+}
+
+.share-password-card h2 {
+  font-size: 20px;
+  margin-bottom: 8px;
+}
+
+.share-password-hint {
+  font-size: 14px;
+  color: #6b6b80;
+  margin-bottom: 20px;
+}
+
+.share-password-input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #2a2a3e;
+  border-radius: 8px;
+  background: #0a0a0f;
+  color: #e2e2e8;
+  font-size: 15px;
+  outline: none;
+  margin-bottom: 12px;
+  transition: border-color 0.2s;
+}
+
+.share-password-input:focus {
+  border-color: #7c3aed;
+}
+
+.share-password-error {
+  color: #fca5a5;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.share-password-setter {
+  margin-top: 16px;
+}
+
+.share-pw-label {
+  display: block;
+  font-size: 13px;
+  color: #8b8ba0;
+  margin-bottom: 6px;
+}
+
 /* ── Responsive ──────────────────────────────────────────────────── */
 
 @media (max-width: 768px) {
