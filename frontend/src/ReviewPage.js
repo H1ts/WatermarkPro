@@ -13,11 +13,11 @@ const TOOLS = [
 
 const COLORS = ['#ff3b3b', '#ffb800', '#00d26a', '#0096ff', '#ffffff'];
 
-function formatTC(seconds) {
+function formatTC(seconds, fps = 25) {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = Math.floor(seconds % 60);
-  const f = Math.floor((seconds % 1) * 25);
+  const f = Math.floor((seconds % 1) * fps);
   return (
     String(h).padStart(2, '0') + ':' +
     String(m).padStart(2, '0') + ':' +
@@ -404,6 +404,7 @@ function ReviewPage() {
   }
 
   const drawActive = paused && tool != null;
+  const fps = jobInfo.fps || 25;
 
   return (
     <div className="review-page">
@@ -451,7 +452,7 @@ function ReviewPage() {
 
           {/* Timeline with markers */}
           <div className="review-timeline">
-            <span className="review-tc">{formatTC(currentTime)}</span>
+            <span className="review-tc">{formatTC(currentTime, fps)}</span>
             <div
               className="review-timeline-bar"
               onClick={(e) => {
@@ -466,12 +467,12 @@ function ReviewPage() {
                   key={c.id}
                   className={`review-timeline-marker ${c.resolved ? 'marker-resolved' : ''}`}
                   style={{ left: `${c.pct}%` }}
-                  title={`${formatTC(c.timecode)} — ${c.author_name}: ${c.text}`}
+                  title={`${formatTC(c.timecode, fps)} — ${c.author_name}: ${c.text}`}
                   onClick={(e) => { e.stopPropagation(); seekTo(c); }}
                 />
               ))}
             </div>
-            <span className="review-tc">{formatTC(duration)}</span>
+            <span className="review-tc">{formatTC(duration, fps)}</span>
           </div>
 
           {/* Toolbar */}
@@ -548,7 +549,7 @@ function ReviewPage() {
                 />
               </div>
               <div className="review-form-actions">
-                <span className="review-form-tc">&#9200; {formatTC(currentTime)}</span>
+                <span className="review-form-tc">&#9200; {formatTC(currentTime, fps)}</span>
                 <div className="review-form-buttons">
                   <button className="review-cancel-btn" onClick={cancelAnnotation}>Отмена</button>
                   <button
@@ -585,7 +586,7 @@ function ReviewPage() {
                 >
                   <div className="review-comment-top">
                     <span className="review-comment-tc" onClick={(e) => { e.stopPropagation(); seekTo(c); }}>
-                      {formatTC(c.timecode)}
+                      {formatTC(c.timecode, fps)}
                     </span>
                     <span className="review-comment-author">{c.author_name}</span>
                     {c.drawing && c.drawing.length > 0 && (

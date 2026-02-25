@@ -24,6 +24,27 @@ def _get_image_aspect(path: str) -> float:
         return 0.5  # fallback: assume 2:1 landscape logo
 
 
+async def get_fps(input_path: str) -> int:
+    """Detect video framerate via ffprobe, return as integer (e.g. 24, 25, 30)."""
+    proc = await asyncio.create_subprocess_exec(
+        "ffprobe", "-v", "error", "-select_streams", "v:0",
+        "-show_entries", "stream=r_frame_rate",
+        "-of", "default=noprint_wrappers=1:nokey=1",
+        input_path,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, _ = await proc.communicate()
+    try:
+        raw = stdout.decode().strip()  # e.g. "30/1" or "30000/1001"
+        if "/" in raw:
+            num, den = raw.split("/")
+            return round(int(num) / int(den))
+        return round(float(raw))
+    except (ValueError, ZeroDivisionError):
+        return 25  # fallback
+
+
 async def get_duration(input_path: str) -> float:
     proc = await asyncio.create_subprocess_exec(
         "ffprobe", "-v", "error",
@@ -42,12 +63,13 @@ async def get_duration(input_path: str) -> float:
 
 def _build_drawtext(client_name: str, x_pct: float = 50.0, y_pct: float = 50.0,
                     opacity: int = 30, font_size: int = 48,
-                    logo_h_expr: str | None = None) -> str:
+                    logo_h_expr: str | None = None, fps: int = 25) -> str:
     """Build drawtext filter chain (text watermark + timecode).
 
     x_pct/y_pct: 0-100 percentage of video dimensions for watermark center.
     logo_h_expr: when set, FFmpeg expression for logo height + gap; text shifts
                  up so the combined text+logo block is centered at y_pct.
+    fps: actual video framerate for timecode rate.
     """
     safe_name = client_name.replace("'", "'\\''").replace(":", "\\:")
     alpha = round(1 - opacity / 100, 2)
@@ -55,7 +77,6 @@ def _build_drawtext(client_name: str, x_pct: float = 50.0, y_pct: float = 50.0,
 
     x_expr = f"w*{x_pct}/100-text_w/2"
     if logo_h_expr:
-        # Center combined block: text_top = center - (text_h + logo_h_total)/2
         y_expr = f"h*{y_pct}/100-(text_h+{logo_h_expr})/2"
     else:
         y_expr = f"h*{y_pct}/100-text_h/2"
@@ -66,10 +87,10 @@ def _build_drawtext(client_name: str, x_pct: float = 50.0, y_pct: float = 50.0,
         f":x={x_expr}:y={y_expr}"
     )
 
-    # Timecode at top-center
+    # Timecode at top-center — use actual video fps
     timecode = (
         f"drawtext=timecode='00\\:00\\:00\\:00'"
-        f":rate=25:fontsize=36:fontcolor=white@{tc_alpha}"
+        f":rate={fps}:fontsize=36:fontcolor=white@{tc_alpha}"
         f":x=(w-text_w)/2:y=20"
     )
 
@@ -78,16 +99,18 @@ def _build_drawtext(client_name: str, x_pct: float = 50.0, y_pct: float = 50.0,
 
 def build_ffmpeg_filter(client_name: str, x_pct: float = 50.0, y_pct: float = 50.0,
                         opacity: int = 30, font_size: int = 48,
-                        logo_path: str | None = None, logo_scale: int = 25):
+                        logo_path: str | None = None, logo_scale: int = 25,
+                        fps: int = 25):
     """Return (extra_inputs, filter_flag, filter_value) for FFmpeg command.
 
     x_pct/y_pct: 0-100 percentage coordinates for watermark center.
     logo_scale: logo width as percentage of video width (10-50).
+    fps: actual video framerate for timecode.
     """
     alpha = round(1 - opacity / 100, 2)
 
     if not logo_path:
-        drawtext = _build_drawtext(client_name, x_pct, y_pct, opacity, font_size)
+        drawtext = _build_drawtext(client_name, x_pct, y_pct, opacity, font_size, fps=fps)
         # Normalize PTS so burn-in timecode starts from 00:00:00:00
         # (source videos from cameras often have non-zero start PTS)
         return [], "-vf", f"setpts=PTS-STARTPTS,{drawtext}"
@@ -111,7 +134,7 @@ def build_ffmpeg_filter(client_name: str, x_pct: float = 50.0, y_pct: float = 50
     # For drawtext: use real logo dimensions for accurate centering
     logo_h_expr = f"{gap}+{logo_h_est}"
     drawtext = _build_drawtext(client_name, x_pct, y_pct, opacity, font_size,
-                               logo_h_expr=logo_h_expr)
+                               logo_h_expr=logo_h_expr, fps=fps)
 
     fc = (
         f"[0:v]setpts=PTS-STARTPTS[vidnorm];"
@@ -144,6 +167,9 @@ async def process_video(job_id: str, input_path: str, client_name: str,
         if duration <= 0:
             raise RuntimeError("Cannot determine video duration")
 
+        fps = await get_fps(input_path)
+        await r.hset(f"job:{job_id}", "fps", str(fps))
+
         ext = ".mov" if codec == "mov" else ".mp4"
         output_file = os.path.join(OUTPUT_DIR, f"{job_id}{ext}")
         hls_dir = os.path.join(HLS_DIR, job_id)
@@ -151,7 +177,7 @@ async def process_video(job_id: str, input_path: str, client_name: str,
 
         extra_inputs, filter_flag, filter_val = build_ffmpeg_filter(
             client_name, wm_x, wm_y, wm_opacity, wm_font_size,
-            logo_path, logo_scale,
+            logo_path, logo_scale, fps=fps,
         )
 
         qp = QUALITY_PRESETS.get(quality, QUALITY_PRESETS["medium"])

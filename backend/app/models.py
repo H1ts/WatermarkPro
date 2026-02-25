@@ -33,6 +33,7 @@ class JobInfo(BaseModel):
     watch_url: Optional[str] = None
     download_url: Optional[str] = None
     codec: Optional[str] = None
+    fps: int = 25
     error: Optional[str] = None
 
 

@@ -270,6 +270,7 @@ async def status(job_id: str):
         watch_url=f"{BASE_URL}/watch/{job_id}" if is_done else None,
         download_url=f"{BASE_URL}/api/download/{job_id}" if is_done else None,
         codec=data.get(b"codec", b"mp4").decode(),
+        fps=int(data.get(b"fps", b"25").decode()),
         error=data.get(b"error", b"").decode() or None,
     )
 
