@@ -88,7 +88,9 @@ def build_ffmpeg_filter(client_name: str, x_pct: float = 50.0, y_pct: float = 50
 
     if not logo_path:
         drawtext = _build_drawtext(client_name, x_pct, y_pct, opacity, font_size)
-        return [], "-vf", drawtext
+        # Normalize PTS so burn-in timecode starts from 00:00:00:00
+        # (source videos from cameras often have non-zero start PTS)
+        return [], "-vf", f"setpts=PTS-STARTPTS,{drawtext}"
 
     gap = max(10, font_size // 4)
     scale_frac = round(logo_scale / 100, 2)
@@ -112,7 +114,8 @@ def build_ffmpeg_filter(client_name: str, x_pct: float = 50.0, y_pct: float = 50
                                logo_h_expr=logo_h_expr)
 
     fc = (
-        f"[1:v][0:v]scale2ref=w='ref_w*{scale_frac}':h='ow*ih/iw'[logo][base];"
+        f"[0:v]setpts=PTS-STARTPTS[vidnorm];"
+        f"[1:v][vidnorm]scale2ref=w='ref_w*{scale_frac}':h='ow*ih/iw'[logo][base];"
         f"[logo]format=rgba,colorchannelmixer=aa={alpha}[logoalpha];"
         f"[base][logoalpha]overlay={overlay_x}:{overlay_y},"
         f"{drawtext}"
