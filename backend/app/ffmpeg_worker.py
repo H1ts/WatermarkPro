@@ -9,6 +9,21 @@ import redis.asyncio as redis
 from .config import UPLOAD_DIR, OUTPUT_DIR, HLS_DIR, REDIS_URL
 
 
+def _get_image_aspect(path: str) -> float:
+    """Return height/width ratio of an image using ffprobe."""
+    result = subprocess.run(
+        ["ffprobe", "-v", "error", "-select_streams", "v:0",
+         "-show_entries", "stream=width,height",
+         "-of", "csv=p=0:s=x", path],
+        capture_output=True, text=True,
+    )
+    try:
+        w, h = result.stdout.strip().split("x")
+        return int(h) / int(w)
+    except (ValueError, ZeroDivisionError):
+        return 0.5  # fallback: assume 2:1 landscape logo
+
+
 async def get_duration(input_path: str) -> float:
     proc = await asyncio.create_subprocess_exec(
         "ffprobe", "-v", "error",
@@ -78,20 +93,21 @@ def build_ffmpeg_filter(client_name: str, x_pct: float = 50.0, y_pct: float = 50
     gap = max(10, font_size // 4)
     scale_frac = round(logo_scale / 100, 2)
 
+    # Get real logo aspect ratio for accurate positioning
+    logo_aspect = round(_get_image_aspect(logo_path), 4)
+    # Scaled logo height = video_width * scale_frac * logo_aspect
+    # In FFmpeg drawtext expressions, w = video width
+    logo_h_est = f"w*{scale_frac}*{logo_aspect}"
+
     # In overlay expressions: w/h = overlay (logo) dims, W/H = main video dims.
     # Center the combined block (text + gap + logo) at the marker point.
-    # logo_top = center + (text_h - logo_h) / 2 + gap/2
-    # But text_h isn't available in overlay expr, so approximate as font_size.
-    # logo_top = center_y + (font_size + gap) / 2 - logo_h / 2
+    # text_h isn't available in overlay expr, so approximate as font_size.
     fs = font_size
     overlay_x = f"W*{x_pct}/100-w/2"
     overlay_y = f"H*{y_pct}/100+({fs}+{gap})/2-h/2"
 
-    # For drawtext: logo_h_total = gap + scaled_logo_height.
-    # We don't know exact logo_h in drawtext, but we know the overlay
-    # happens first and drawtext sees the composited frame.
-    # Approximate logo_h as font_size (good enough for centering).
-    logo_h_expr = f"{gap}+{fs}"
+    # For drawtext: use real logo dimensions for accurate centering
+    logo_h_expr = f"{gap}+{logo_h_est}"
     drawtext = _build_drawtext(client_name, x_pct, y_pct, opacity, font_size,
                                logo_h_expr=logo_h_expr)
 
