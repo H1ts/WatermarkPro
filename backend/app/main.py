@@ -1,6 +1,7 @@
 import asyncio
 import os
 import uuid
+from datetime import datetime, timezone
 
 import aiofiles
 import redis.asyncio as redis
@@ -9,7 +10,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 
 from .config import UPLOAD_DIR, OUTPUT_DIR, HLS_DIR, REDIS_URL, BASE_URL
-from .models import ProcessRequest, JobInfo, JobStatus  # noqa: F401
+from .models import (  # noqa: F401
+    ProcessRequest, JobInfo, JobStatus,
+    CreateProjectRequest, ProjectInfo, ProjectDetail,
+)
 from .ffmpeg_worker import process_video
 
 app = FastAPI(title="WatermarkPro API", version="0.1.0")
@@ -32,6 +36,96 @@ async def startup():
     for d in [UPLOAD_DIR, OUTPUT_DIR, HLS_DIR]:
         os.makedirs(d, exist_ok=True)
 
+
+# ── Projects ──────────────────────────────────────────────────────────
+
+@app.post("/projects")
+async def create_project(req: CreateProjectRequest):
+    project_id = uuid.uuid4().hex[:12]
+    now = datetime.now(timezone.utc).isoformat()
+    r = _redis()
+    await r.hset(f"project:{project_id}", mapping={
+        "name": req.name,
+        "created_at": now,
+    })
+    await r.sadd("projects", project_id)
+    await r.aclose()
+    return ProjectInfo(id=project_id, name=req.name, created_at=now, job_count=0)
+
+
+@app.get("/projects")
+async def list_projects():
+    r = _redis()
+    project_ids = await r.smembers("projects")
+    projects = []
+    for pid_bytes in project_ids:
+        pid = pid_bytes.decode() if isinstance(pid_bytes, bytes) else pid_bytes
+        data = await r.hgetall(f"project:{pid}")
+        if not data:
+            continue
+        job_count = await r.scard(f"project:{pid}:jobs")
+        projects.append(ProjectInfo(
+            id=pid,
+            name=data.get(b"name", b"").decode(),
+            created_at=data.get(b"created_at", b"").decode(),
+            job_count=job_count,
+        ))
+    await r.aclose()
+    projects.sort(key=lambda p: p.created_at, reverse=True)
+    return projects
+
+
+@app.get("/projects/{project_id}")
+async def get_project(project_id: str):
+    r = _redis()
+    data = await r.hgetall(f"project:{project_id}")
+    if not data:
+        await r.aclose()
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    job_ids = await r.smembers(f"project:{project_id}:jobs")
+    jobs = []
+    for jid_bytes in job_ids:
+        jid = jid_bytes.decode() if isinstance(jid_bytes, bytes) else jid_bytes
+        jdata = await r.hgetall(f"job:{jid}")
+        if not jdata:
+            continue
+        status_val = jdata.get(b"status", b"pending").decode()
+        jobs.append(JobInfo(
+            id=jid,
+            status=JobStatus(status_val),
+            progress=int(jdata.get(b"progress", b"0").decode()),
+            filename=jdata.get(b"filename", b"").decode() or None,
+            client_name=jdata.get(b"client_name", b"").decode() or None,
+            watch_url=f"{BASE_URL}/watch/{jid}" if status_val == "done" else None,
+            error=jdata.get(b"error", b"").decode() or None,
+        ))
+    await r.aclose()
+
+    jobs.sort(key=lambda j: j.id, reverse=True)
+    return ProjectDetail(
+        id=project_id,
+        name=data.get(b"name", b"").decode(),
+        created_at=data.get(b"created_at", b"").decode(),
+        jobs=jobs,
+    )
+
+
+@app.delete("/projects/{project_id}")
+async def delete_project(project_id: str):
+    r = _redis()
+    exists = await r.exists(f"project:{project_id}")
+    if not exists:
+        await r.aclose()
+        raise HTTPException(status_code=404, detail="Project not found")
+    await r.delete(f"project:{project_id}")
+    await r.srem("projects", project_id)
+    await r.delete(f"project:{project_id}:jobs")
+    await r.aclose()
+    return {"ok": True}
+
+
+# ── File upload ───────────────────────────────────────────────────────
 
 @app.post("/upload")
 async def upload_video(file: UploadFile = File(...)):
@@ -125,7 +219,11 @@ async def process(req: ProcessRequest):
     }
     if req.logo_id:
         job_mapping["logo_id"] = req.logo_id
+    if req.project_id:
+        job_mapping["project_id"] = req.project_id
     await r.hset(f"job:{job_id}", mapping=job_mapping)
+    if req.project_id:
+        await r.sadd(f"project:{req.project_id}:jobs", job_id)
     await r.aclose()
 
     asyncio.create_task(process_video(

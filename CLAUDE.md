@@ -12,7 +12,7 @@ WatermarkPro — веб-платформа для кинопродакшена. 
 PRD: `WatermarkPro_PRD.docx` в корне репозитория — полная спецификация продукта.
 
 ## Текущий стек
-- Frontend: React 18, vanilla CSS, тёмная тема
+- Frontend: React 18, React Router 6, vanilla CSS, тёмная тема
 - Backend: FastAPI, Python 3.12, FFmpeg
 - Очередь/кэш: Redis 7
 - Прокси: Nginx
@@ -48,7 +48,7 @@ PRD: `WatermarkPro_PRD.docx` в корне репозитория — полна
 - [ ] MP4 HQ рендер (slow preset, CRF 18)
 - [ ] WebSocket прогресс вместо polling
 - [ ] Пакетная загрузка нескольких файлов
-- [ ] Проекты — группировка файлов
+- [x] Проекты — группировка файлов (Dashboard → Project → Upload)
 - [ ] Аналитика просмотров
 - [ ] Оплата ЮКасса/Stripe
 
@@ -66,26 +66,38 @@ PRD: `WatermarkPro_PRD.docx` в корне репозитория — полна
 - .env: BASE_URL=http://85.198.84.222
 - Статус: задеплоен, все 4 контейнера Up, сайт доступен
 
-## Последняя сессия — 2026-02-24
+## Последняя сессия — 2026-02-25
 
 ### Что сделано
-- Таймкод перенесён с низа на верх кадра, размер увеличен с 24px до 36px
-- В превью добавлен таймкод — теперь превью соответствует реальному рендеру
-- Исправлено несоответствие формы между превью и результатом
+- **Проекты** — полная реализация структуры с проектами (как в Frame.io)
+  - Dashboard: список проектов + кнопка «Новый проект» + модалка создания
+  - Внутри проекта: форма загрузки видео + настройки watermark + история файлов
+  - Backend: CRUD API для проектов (POST/GET/DELETE /projects)
+  - Джобы привязываются к проекту через project_id
+  - React Router 6 для навигации (/ → Dashboard, /projects/:id → ProjectPage)
+  - SPA routing через nginx (try_files → index.html)
+  - Интерфейс переведён на русский
 - Ветка: `claude/resume-work-i300F`
 
-### Приоритеты на следующую сессию (обсуждено с пользователем)
+### Предыдущая сессия — 2026-02-24
+- Таймкод перенесён с низа на верх кадра, размер увеличен с 24px до 36px
+- В превью добавлен таймкод — теперь превью соответствует реальному рендеру
+
+### Приоритеты на следующую сессию
 1. **Signed URLs + TTL + лимит просмотров** — защита ссылок, ядро продукта
 2. **ABR HLS (360p/720p/1080p)** — адаптивный битрейт для разных скоростей
 3. **PostgreSQL** — миграция метаданных с Redis на нормальную БД
 
 ## Ключевые файлы
-- `backend/app/main.py` — API эндпоинты (upload, process, status, watch, health)
+- `backend/app/main.py` — API эндпоинты (projects, upload, process, status, watch, health)
 - `backend/app/ffmpeg_worker.py` — обработка видео (watermark → MP4 → HLS)
-- `backend/app/models.py` — Pydantic модели (ProcessRequest, JobStatus, JobInfo)
+- `backend/app/models.py` — Pydantic модели (ProcessRequest, JobStatus, JobInfo, ProjectInfo, ProjectDetail)
 - `backend/app/config.py` — конфигурация (dirs, redis, base_url)
-- `frontend/src/App.js` — основной React компонент (upload, progress, result)
+- `frontend/src/App.js` — роутер (Dashboard + ProjectPage)
+- `frontend/src/Dashboard.js` — список проектов, модалка создания
+- `frontend/src/ProjectPage.js` — загрузка видео внутри проекта, настройки, история файлов
 - `frontend/src/App.css` — стили (тёмная тема, gradient purple)
+- `frontend/nginx.conf` — SPA routing (try_files → index.html)
 - `nginx/nginx.conf` — маршруты: / → frontend, /api → backend, /hls → статика
 - `docker-compose.yml` — оркестрация 4 сервисов
 - `deploy.sh` — автоматический деплой на Ubuntu/Debian VPS
