@@ -23,6 +23,7 @@ class ProcessRequest(BaseModel):
     logo_scale: int = Field(default=25, ge=10, le=50)
     quality: str = Field(default="medium", pattern="^(low|medium|high)$")
     codec: str = Field(default="mp4", pattern="^(mp4|mov)$")
+    notification_email: Optional[str] = Field(default=None, max_length=200)
 
 
 class JobInfo(BaseModel):

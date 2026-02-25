@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import os
 import re
 import subprocess
@@ -7,6 +8,8 @@ import subprocess
 import redis.asyncio as redis
 
 from .config import UPLOAD_DIR, OUTPUT_DIR, HLS_DIR, REDIS_URL
+
+logger = logging.getLogger("watermarkpro.worker")
 
 
 def _get_image_aspect(path: str) -> float:
@@ -265,6 +268,19 @@ async def process_video(job_id: str, input_path: str, client_name: str,
             "status": "done",
             "progress": "100",
         })
+
+        # Email-нотификация о завершении рендера
+        try:
+            from .email_service import send_email_async, render_done_html
+            job_data = await r.hgetall(f"job:{job_id}")
+            email = job_data.get(b"notification_email", b"").decode()
+            if email:
+                fn = job_data.get(b"filename", b"video").decode()
+                cn = job_data.get(b"client_name", b"").decode()
+                html = render_done_html(fn, cn, job_id)
+                await send_email_async(email, f"Видео готово: {fn}", html)
+        except Exception:
+            logger.exception("Failed to send render-done email")
 
     except Exception as e:
         await r.hset(f"job:{job_id}", mapping={

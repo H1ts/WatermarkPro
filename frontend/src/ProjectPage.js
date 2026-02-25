@@ -68,6 +68,7 @@ function ProjectPage() {
   const [logoUploading, setLogoUploading] = useState(false);
   const [quality, setQuality] = useState('medium');
   const [codec, setCodec] = useState('mp4');
+  const [notifyEmail, setNotifyEmail] = useState(() => localStorage.getItem('wmpro_notify_email') || '');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [fileId, setFileId] = useState(null);
@@ -278,6 +279,7 @@ function ProjectPage() {
           logo_scale: logoScale,
           quality: quality,
           codec: codec,
+          ...(notifyEmail.trim() && { notification_email: notifyEmail.trim() }),
         }),
       });
       const procData = await procRes.json();
@@ -559,6 +561,20 @@ function ProjectPage() {
                   ))}
                 </div>
               </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="notify-email">Email для уведомлений (необязательно)</label>
+              <input
+                id="notify-email"
+                type="email"
+                placeholder="you@example.com"
+                value={notifyEmail}
+                onChange={(e) => {
+                  setNotifyEmail(e.target.value);
+                  localStorage.setItem('wmpro_notify_email', e.target.value);
+                }}
+              />
             </div>
 
             <button

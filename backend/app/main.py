@@ -21,6 +21,7 @@ from .models import (  # noqa: F401
     CreateCommentRequest, UpdateCommentRequest, CommentInfo,
 )
 from .ffmpeg_worker import process_video
+from .email_service import send_email_async, render_done_html, new_comment_html, status_change_html
 
 HLS_SECRET = os.environ.get("HLS_SECRET", secrets.token_hex(32))
 
@@ -254,6 +255,8 @@ async def process(req: ProcessRequest):
         job_mapping["parent_job_id"] = req.parent_job_id
     if req.logo_id:
         job_mapping["logo_id"] = req.logo_id
+    if req.notification_email:
+        job_mapping["notification_email"] = req.notification_email
     if req.project_id:
         job_mapping["project_id"] = req.project_id
     await r.hset(f"job:{job_id}", mapping=job_mapping)
@@ -422,7 +425,19 @@ async def update_review_status(job_id: str, req: UpdateReviewStatusRequest):
         await r.aclose()
         raise HTTPException(status_code=404, detail="Job not found")
     await r.hset(f"job:{job_id}", "review_status", req.review_status)
+
+    # Email-нотификация о смене статуса
+    job_data = await r.hgetall(f"job:{job_id}")
+    email = job_data.get(b"notification_email", b"").decode() if job_data else ""
     await r.aclose()
+
+    if email:
+        filename = job_data.get(b"filename", b"video").decode()
+        labels = {"approved": "утверждено", "needs_revision": "нужны правки", "pending_review": "на рецензии"}
+        label = labels.get(req.review_status, req.review_status)
+        html = status_change_html(filename, req.review_status, job_id)
+        asyncio.create_task(send_email_async(email, f"Статус: {label} — {filename}", html))
+
     return {"ok": True, "review_status": req.review_status}
 
 
@@ -603,7 +618,23 @@ async def create_comment(req: CreateCommentRequest):
         "created_at": now,
     })
     await r.sadd(f"job:{req.job_id}:comments", comment_id)
+
+    # Email-нотификация о новом комментарии
+    job_data = await r.hgetall(f"job:{req.job_id}")
+    email = job_data.get(b"notification_email", b"").decode() if job_data else ""
     await r.aclose()
+
+    if email:
+        filename = job_data.get(b"filename", b"video").decode()
+        fps = int(job_data.get(b"fps", b"25").decode())
+        h = int(req.timecode // 3600)
+        m = int((req.timecode % 3600) // 60)
+        s = int(req.timecode % 60)
+        f = int((req.timecode % 1) * fps)
+        tc_str = f"{h:02d}:{m:02d}:{s:02d}:{f:02d}"
+        html = new_comment_html(filename, req.author_name, req.text, tc_str, req.job_id)
+        asyncio.create_task(send_email_async(email, f"Новый комментарий: {filename}", html))
+
     return CommentInfo(
         id=comment_id, job_id=req.job_id,
         author_name=req.author_name, text=req.text,
