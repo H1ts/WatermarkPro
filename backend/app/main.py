@@ -218,6 +218,8 @@ async def process(req: ProcessRequest):
         "wm_opacity": str(req.wm_opacity),
         "wm_font_size": str(req.wm_font_size),
         "logo_scale": str(req.logo_scale),
+        "quality": req.quality,
+        "codec": req.codec,
     }
     if req.logo_id:
         job_mapping["logo_id"] = req.logo_id
@@ -236,6 +238,8 @@ async def process(req: ProcessRequest):
         wm_font_size=req.wm_font_size,
         logo_path=logo_path,
         logo_scale=req.logo_scale,
+        quality=req.quality,
+        codec=req.codec,
     ))
 
     return {
@@ -279,17 +283,25 @@ async def download(job_id: str):
     if data.get(b"status", b"").decode() != "done":
         raise HTTPException(status_code=400, detail="Video is still processing")
 
-    mp4_path = os.path.join(OUTPUT_DIR, f"{job_id}.mp4")
-    if not os.path.isfile(mp4_path):
+    job_codec = data.get(b"codec", b"mp4").decode()
+    ext = ".mov" if job_codec == "mov" else ".mp4"
+    output_path = os.path.join(OUTPUT_DIR, f"{job_id}{ext}")
+    if not os.path.isfile(output_path):
+        # fallback: try the other extension
+        alt_ext = ".mp4" if ext == ".mov" else ".mov"
+        output_path = os.path.join(OUTPUT_DIR, f"{job_id}{alt_ext}")
+        ext = alt_ext
+    if not os.path.isfile(output_path):
         raise HTTPException(status_code=404, detail="File not found on disk")
 
-    filename = data.get(b"filename", b"video.mp4").decode()
-    if not filename.lower().endswith(".mp4"):
-        filename = os.path.splitext(filename)[0] + ".mp4"
+    filename = data.get(b"filename", b"video").decode()
+    base = os.path.splitext(filename)[0]
+    filename = base + ext
+    media_type = "video/quicktime" if ext == ".mov" else "video/mp4"
 
     return FileResponse(
-        mp4_path,
-        media_type="video/mp4",
+        output_path,
+        media_type=media_type,
         filename=filename,
     )
 

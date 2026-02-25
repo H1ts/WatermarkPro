@@ -104,10 +104,18 @@ def build_ffmpeg_filter(client_name: str, x_pct: float = 50.0, y_pct: float = 50
     return ["-i", logo_path], "-filter_complex", fc
 
 
+QUALITY_PRESETS = {
+    "low":    {"preset": "ultrafast", "crf": "28"},
+    "medium": {"preset": "medium",    "crf": "23"},
+    "high":   {"preset": "slow",      "crf": "18"},
+}
+
+
 async def process_video(job_id: str, input_path: str, client_name: str,
                         wm_x: float = 50.0, wm_y: float = 50.0,
                         wm_opacity: int = 30, wm_font_size: int = 48,
-                        logo_path: str | None = None, logo_scale: int = 25):
+                        logo_path: str | None = None, logo_scale: int = 25,
+                        quality: str = "medium", codec: str = "mp4"):
     r = redis.from_url(REDIS_URL)
 
     try:
@@ -117,7 +125,8 @@ async def process_video(job_id: str, input_path: str, client_name: str,
         if duration <= 0:
             raise RuntimeError("Cannot determine video duration")
 
-        mp4_output = os.path.join(OUTPUT_DIR, f"{job_id}.mp4")
+        ext = ".mov" if codec == "mov" else ".mp4"
+        output_file = os.path.join(OUTPUT_DIR, f"{job_id}{ext}")
         hls_dir = os.path.join(HLS_DIR, job_id)
         os.makedirs(hls_dir, exist_ok=True)
 
@@ -126,15 +135,17 @@ async def process_video(job_id: str, input_path: str, client_name: str,
             logo_path, logo_scale,
         )
 
+        qp = QUALITY_PRESETS.get(quality, QUALITY_PRESETS["medium"])
+
         cmd = [
             "ffmpeg", "-y", "-i", input_path,
             *extra_inputs,
             filter_flag, filter_val,
-            "-c:v", "libx264", "-preset", "ultrafast",
+            "-c:v", "libx264", "-preset", qp["preset"], "-crf", qp["crf"],
             "-c:a", "aac", "-b:a", "128k",
             "-movflags", "+faststart",
             "-progress", "pipe:1",
-            mp4_output,
+            output_file,
         ]
 
         proc = await asyncio.create_subprocess_exec(
@@ -157,12 +168,12 @@ async def process_video(job_id: str, input_path: str, client_name: str,
         await proc.wait()
         if proc.returncode != 0:
             stderr_out = await proc.stderr.read()
-            raise RuntimeError(f"FFmpeg MP4 failed: {stderr_out.decode()[:500]}")
+            raise RuntimeError(f"FFmpeg encode failed: {stderr_out.decode()[:500]}")
 
         await r.hset(f"job:{job_id}", "progress", "85")
 
         hls_cmd = [
-            "ffmpeg", "-y", "-i", mp4_output,
+            "ffmpeg", "-y", "-i", output_file,
             "-c:v", "copy", "-c:a", "copy",
             "-f", "hls",
             "-hls_time", "6",

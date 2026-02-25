@@ -250,6 +250,36 @@ body {
   color: #4a4a5e;
 }
 
+/* Option buttons (quality, codec) */
+.option-group {
+  display: flex;
+  gap: 8px;
+}
+
+.option-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #2a2a3e;
+  border-radius: 6px;
+  background: #0a0a0f;
+  color: #8b8ba0;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.option-btn:hover {
+  border-color: #4a4a5e;
+  color: #e2e2e8;
+}
+
+.option-btn--active {
+  border-color: #7c3aed;
+  background: #1e1b4b;
+  color: #a78bfa;
+  font-weight: 600;
+}
+
 /* Logo upload */
 .logo-upload-btn {
   padding: 8px 16px;

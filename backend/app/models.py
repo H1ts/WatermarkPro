@@ -20,6 +20,8 @@ class ProcessRequest(BaseModel):
     wm_font_size: int = Field(default=48, ge=16, le=120)
     logo_id: Optional[str] = None
     logo_scale: int = Field(default=25, ge=10, le=50)
+    quality: str = Field(default="medium", pattern="^(low|medium|high)$")
+    codec: str = Field(default="mp4", pattern="^(mp4|mov)$")
 
 
 class JobInfo(BaseModel):

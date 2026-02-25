@@ -23,6 +23,8 @@ function ProjectPage() {
   const [logoId, setLogoId] = useState(null);
   const [logoScale, setLogoScale] = useState(25);
   const [logoUploading, setLogoUploading] = useState(false);
+  const [quality, setQuality] = useState('medium');
+  const [codec, setCodec] = useState('mp4');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [fileId, setFileId] = useState(null);
@@ -56,7 +58,7 @@ function ProjectPage() {
     fetchProject();
   }, [fetchProject]);
 
-  // Track preview container width
+  // Track preview container width — re-run when form becomes visible
   useEffect(() => {
     const el = previewRef.current;
     if (!el) return;
@@ -65,7 +67,7 @@ function ProjectPage() {
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [projectLoading, jobId]);
 
   const resetForm = () => {
     setFile(null);
@@ -229,6 +231,8 @@ function ProjectPage() {
           wm_font_size: wmFontSize,
           ...(logoId && { logo_id: logoId }),
           logo_scale: logoScale,
+          quality: quality,
+          codec: codec,
         }),
       });
       const procData = await procRes.json();
@@ -470,6 +474,45 @@ function ProjectPage() {
                   <div className="wm-range-labels"><span>10%</span><span>50%</span></div>
                 </div>
               )}
+
+              <div className="wm-row">
+                <label>Качество</label>
+                <div className="option-group">
+                  {[
+                    { value: 'low', label: 'Низкое' },
+                    { value: 'medium', label: 'Среднее' },
+                    { value: 'high', label: 'Лучшее' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      className={`option-btn ${quality === opt.value ? 'option-btn--active' : ''}`}
+                      onClick={() => setQuality(opt.value)}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="wm-row">
+                <label>Формат</label>
+                <div className="option-group">
+                  {[
+                    { value: 'mp4', label: 'MP4' },
+                    { value: 'mov', label: 'MOV' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      className={`option-btn ${codec === opt.value ? 'option-btn--active' : ''}`}
+                      onClick={() => setCodec(opt.value)}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             <button
