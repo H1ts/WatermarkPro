@@ -25,7 +25,14 @@ def _get_image_aspect(path: str) -> float:
 
 
 async def get_fps(input_path: str) -> int:
-    """Detect video framerate via ffprobe, return as integer (e.g. 24, 25, 30)."""
+    """Detect video framerate via ffprobe, clamped to standard rates.
+
+    Timecode format HH:MM:SS:FF supports at most 2-digit frames,
+    so rate must be <= 99.  For slow-motion sources (120, 240, 1000 fps)
+    we fall back to the nearest standard broadcast rate.
+    """
+    STANDARD_RATES = [24, 25, 30, 48, 50, 60]
+
     proc = await asyncio.create_subprocess_exec(
         "ffprobe", "-v", "error", "-select_streams", "v:0",
         "-show_entries", "stream=r_frame_rate",
@@ -39,10 +46,16 @@ async def get_fps(input_path: str) -> int:
         raw = stdout.decode().strip()  # e.g. "30/1" or "30000/1001"
         if "/" in raw:
             num, den = raw.split("/")
-            return round(int(num) / int(den))
-        return round(float(raw))
+            detected = round(int(num) / int(den))
+        else:
+            detected = round(float(raw))
     except (ValueError, ZeroDivisionError):
         return 25  # fallback
+
+    if detected in STANDARD_RATES:
+        return detected
+    # For non-standard rates, pick nearest standard rate
+    return min(STANDARD_RATES, key=lambda r: abs(r - detected))
 
 
 async def get_duration(input_path: str) -> float:
