@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from enum import Enum
-from typing import Optional, List
+from typing import Optional, List, Any
 
 
 class JobStatus(str, Enum):
@@ -52,3 +52,29 @@ class ProjectDetail(BaseModel):
     name: str
     created_at: str
     jobs: List[JobInfo] = []
+
+
+# ── Comments (review) ─────────────────────────────────────────────────
+
+class CreateCommentRequest(BaseModel):
+    job_id: str
+    author_name: str = Field(default="Аноним", max_length=100)
+    text: str = Field(default="", max_length=2000)
+    timecode: float = Field(ge=0)
+    drawing: List[Any] = Field(default_factory=list)
+
+
+class UpdateCommentRequest(BaseModel):
+    resolved: Optional[bool] = None
+    text: Optional[str] = None
+
+
+class CommentInfo(BaseModel):
+    id: str
+    job_id: str
+    author_name: str
+    text: str
+    timecode: float
+    drawing: List[Any] = []
+    resolved: bool = False
+    created_at: str

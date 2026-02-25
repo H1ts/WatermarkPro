@@ -13,6 +13,7 @@ from .config import UPLOAD_DIR, OUTPUT_DIR, HLS_DIR, REDIS_URL, BASE_URL
 from .models import (  # noqa: F401
     ProcessRequest, JobInfo, JobStatus,
     CreateProjectRequest, ProjectInfo, ProjectDetail,
+    CreateCommentRequest, UpdateCommentRequest, CommentInfo,
 )
 from .ffmpeg_worker import process_video
 
@@ -371,6 +372,97 @@ async def watch(job_id: str):
     </script>
 </body>
 </html>""")
+
+
+# ── Comments (review) ────────────────────────────────────────────────
+
+@app.post("/comments")
+async def create_comment(req: CreateCommentRequest):
+    import json as _json
+    comment_id = uuid.uuid4().hex[:12]
+    now = datetime.now(timezone.utc).isoformat()
+    r = _redis()
+    await r.hset(f"comment:{comment_id}", mapping={
+        "job_id": req.job_id,
+        "author_name": req.author_name,
+        "text": req.text,
+        "timecode": str(req.timecode),
+        "drawing": _json.dumps(req.drawing),
+        "resolved": "0",
+        "created_at": now,
+    })
+    await r.sadd(f"job:{req.job_id}:comments", comment_id)
+    await r.aclose()
+    return CommentInfo(
+        id=comment_id, job_id=req.job_id,
+        author_name=req.author_name, text=req.text,
+        timecode=req.timecode, drawing=req.drawing,
+        resolved=False, created_at=now,
+    )
+
+
+@app.get("/comments/{job_id}")
+async def list_comments(job_id: str):
+    import json as _json
+    r = _redis()
+    comment_ids = await r.smembers(f"job:{job_id}:comments")
+    comments = []
+    for cid_bytes in comment_ids:
+        cid = cid_bytes.decode() if isinstance(cid_bytes, bytes) else cid_bytes
+        data = await r.hgetall(f"comment:{cid}")
+        if not data:
+            continue
+        drawing_raw = data.get(b"drawing", b"[]").decode()
+        try:
+            drawing = _json.loads(drawing_raw)
+        except _json.JSONDecodeError:
+            drawing = []
+        comments.append(CommentInfo(
+            id=cid,
+            job_id=data.get(b"job_id", b"").decode(),
+            author_name=data.get(b"author_name", b"Аноним").decode(),
+            text=data.get(b"text", b"").decode(),
+            timecode=float(data.get(b"timecode", b"0").decode()),
+            drawing=drawing,
+            resolved=data.get(b"resolved", b"0").decode() == "1",
+            created_at=data.get(b"created_at", b"").decode(),
+        ))
+    await r.aclose()
+    comments.sort(key=lambda c: c.timecode)
+    return comments
+
+
+@app.patch("/comments/{comment_id}")
+async def update_comment(comment_id: str, req: UpdateCommentRequest):
+    r = _redis()
+    exists = await r.exists(f"comment:{comment_id}")
+    if not exists:
+        await r.aclose()
+        raise HTTPException(status_code=404, detail="Comment not found")
+    updates = {}
+    if req.resolved is not None:
+        updates["resolved"] = "1" if req.resolved else "0"
+    if req.text is not None:
+        updates["text"] = req.text
+    if updates:
+        await r.hset(f"comment:{comment_id}", mapping=updates)
+    await r.aclose()
+    return {"ok": True}
+
+
+@app.delete("/comments/{comment_id}")
+async def delete_comment(comment_id: str):
+    r = _redis()
+    data = await r.hgetall(f"comment:{comment_id}")
+    if not data:
+        await r.aclose()
+        raise HTTPException(status_code=404, detail="Comment not found")
+    job_id = data.get(b"job_id", b"").decode()
+    await r.delete(f"comment:{comment_id}")
+    if job_id:
+        await r.srem(f"job:{job_id}:comments", comment_id)
+    await r.aclose()
+    return {"ok": True}
 
 
 @app.get("/health")

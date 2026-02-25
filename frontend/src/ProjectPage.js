@@ -550,8 +550,8 @@ function ProjectPage() {
             <span className="result-icon">&#10003;</span>
             <h2>Готово!</h2>
             <div className="result-actions">
-              <a href={watchUrl} target="_blank" rel="noopener noreferrer" className="btn-watch">
-                Открыть плеер
+              <a href={`/review/${jobId}`} className="btn-watch">
+                Рецензировать
               </a>
               {downloadUrl && (
                 <a href={downloadUrl} download className="btn-download">
@@ -591,8 +591,8 @@ function ProjectPage() {
                       <a href={job.download_url} download className="job-card-link job-card-download">
                         Скачать {(job.codec || 'mp4').toUpperCase()}
                       </a>
-                      <a href={job.watch_url} target="_blank" rel="noopener noreferrer" className="job-card-link">
-                        Смотреть
+                      <a href={`/review/${job.id}`} className="job-card-link">
+                        Рецензировать
                       </a>
                     </>
                   )}
