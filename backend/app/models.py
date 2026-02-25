@@ -31,6 +31,7 @@ class JobInfo(BaseModel):
     filename: Optional[str] = None
     client_name: Optional[str] = None
     watch_url: Optional[str] = None
+    share_url: Optional[str] = None
     download_url: Optional[str] = None
     codec: Optional[str] = None
     fps: int = 25

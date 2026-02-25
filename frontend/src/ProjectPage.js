@@ -32,6 +32,7 @@ function ProjectPage() {
   const [jobStatus, setJobStatus] = useState(null);
   const [jobProgress, setJobProgress] = useState(0);
   const [watchUrl, setWatchUrl] = useState(null);
+  const [shareUrl, setShareUrl] = useState(null);
   const [downloadUrl, setDownloadUrl] = useState(null);
   const [error, setError] = useState(null);
   const [dragOver, setDragOver] = useState(false);
@@ -76,6 +77,7 @@ function ProjectPage() {
     setJobStatus(null);
     setJobProgress(0);
     setWatchUrl(null);
+    setShareUrl(null);
     setDownloadUrl(null);
     setError(null);
     setUploadProgress(0);
@@ -262,6 +264,7 @@ function ProjectPage() {
         setJobProgress(data.progress);
         if (data.status === 'done') {
           setWatchUrl(data.watch_url);
+          setShareUrl(data.share_url);
           setDownloadUrl(data.download_url);
           clearInterval(pollRef.current);
           fetchProject(); // refresh job list
@@ -559,9 +562,10 @@ function ProjectPage() {
                 </a>
               )}
             </div>
+            <p className="link-label">Ссылка для клиента:</p>
             <div className="link-box">
-              <input readOnly value={watchUrl} onClick={(e) => e.target.select()} />
-              <button onClick={() => navigator.clipboard.writeText(watchUrl)}>Копировать</button>
+              <input readOnly value={shareUrl || watchUrl} onClick={(e) => e.target.select()} />
+              <button onClick={() => navigator.clipboard.writeText(shareUrl || watchUrl)}>Копировать</button>
             </div>
             <button className="btn-new" onClick={resetForm}>Загрузить ещё</button>
           </div>
@@ -588,6 +592,18 @@ function ProjectPage() {
                 <div className="job-card-actions">
                   {job.status === 'done' && (
                     <>
+                      <button
+                        className="job-card-link job-card-share"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const url = job.share_url || `${window.location.origin}/share/${job.id}`;
+                          navigator.clipboard.writeText(url);
+                          e.target.textContent = 'Скопировано!';
+                          setTimeout(() => { e.target.textContent = 'Поделиться'; }, 1500);
+                        }}
+                      >
+                        Поделиться
+                      </button>
                       <a href={job.download_url} download className="job-card-link job-card-download">
                         Скачать {(job.codec || 'mp4').toUpperCase()}
                       </a>

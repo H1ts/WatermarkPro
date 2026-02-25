@@ -488,10 +488,16 @@ body {
   color: #e2e2e8;
 }
 
+.link-label {
+  font-size: 13px;
+  color: #8b8ba0;
+  margin-top: 20px;
+  margin-bottom: 6px;
+}
+
 .link-box {
   display: flex;
   gap: 8px;
-  margin-top: 20px;
 }
 
 .link-box input {
@@ -835,6 +841,19 @@ body {
   opacity: 0.9;
 }
 
+.job-card-share {
+  background: transparent;
+  border: 1px solid #00d26a;
+  color: #00d26a;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.job-card-share:hover {
+  background: #0a2618;
+  opacity: 1;
+}
+
 .job-card-download {
   background: transparent;
   border: 1px solid #7c3aed;
@@ -915,6 +934,16 @@ body {
   font-size: 13px;
   color: #6b6b80;
   margin-left: auto;
+}
+
+.review-brand {
+  font-size: 16px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #7c3aed, #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  white-space: nowrap;
 }
 
 /* ── Body (video + comments) ─────────────────────────────────────── */

@@ -84,7 +84,7 @@ function renderStrokes(ctx, list, w, h) {
 
 /* ── Component ───────────────────────────────────────────────────── */
 
-function ReviewPage() {
+function ReviewPage({ shareMode = false }) {
   const { jobId } = useParams();
   const navigate = useNavigate();
 
@@ -410,7 +410,11 @@ function ReviewPage() {
     <div className="review-page">
       {/* Header */}
       <header className="review-header">
-        <button className="btn-back" onClick={() => navigate(-1)}>&#8592; Назад</button>
+        {shareMode ? (
+          <span className="review-brand">WatermarkPro</span>
+        ) : (
+          <button className="btn-back" onClick={() => navigate(-1)}>&#8592; Назад</button>
+        )}
         <h1 className="review-title">{jobInfo.filename || 'Video'}</h1>
         <span className="review-client">{jobInfo.client_name}</span>
       </header>

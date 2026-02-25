@@ -100,6 +100,7 @@ async def get_project(project_id: str):
             filename=jdata.get(b"filename", b"").decode() or None,
             client_name=jdata.get(b"client_name", b"").decode() or None,
             watch_url=f"{BASE_URL}/watch/{jid}" if is_done else None,
+            share_url=f"{BASE_URL}/share/{jid}" if is_done else None,
             download_url=f"{BASE_URL}/api/download/{jid}" if is_done else None,
             codec=jdata.get(b"codec", b"mp4").decode(),
             error=jdata.get(b"error", b"").decode() or None,
@@ -248,6 +249,7 @@ async def process(req: ProcessRequest):
         "job_id": job_id,
         "status": "pending",
         "watch_url": f"{BASE_URL}/watch/{job_id}",
+        "share_url": f"{BASE_URL}/share/{job_id}",
     }
 
 
@@ -268,6 +270,7 @@ async def status(job_id: str):
         filename=data.get(b"filename", b"").decode() or None,
         client_name=data.get(b"client_name", b"").decode() or None,
         watch_url=f"{BASE_URL}/watch/{job_id}" if is_done else None,
+        share_url=f"{BASE_URL}/share/{job_id}" if is_done else None,
         download_url=f"{BASE_URL}/api/download/{job_id}" if is_done else None,
         codec=data.get(b"codec", b"mp4").decode(),
         fps=int(data.get(b"fps", b"25").decode()),

@@ -12,6 +12,7 @@ function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/projects/:projectId" element={<ProjectPage />} />
         <Route path="/review/:jobId" element={<ReviewPage />} />
+        <Route path="/share/:jobId" element={<ReviewPage shareMode />} />
       </Routes>
     </BrowserRouter>
   );
