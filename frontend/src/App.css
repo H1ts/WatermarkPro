@@ -946,6 +946,49 @@ body {
   white-space: nowrap;
 }
 
+.review-versions {
+  display: flex;
+  gap: 4px;
+}
+
+.review-version-btn {
+  padding: 4px 10px;
+  border: 1px solid #2a2a3e;
+  border-radius: 4px;
+  background: #12121a;
+  color: #8b8ba0;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.review-version-btn:hover:not(:disabled) {
+  border-color: #7c3aed;
+  color: #e2e2e8;
+}
+
+.review-version-btn--active {
+  border-color: #7c3aed;
+  background: #1e1b4b;
+  color: #a78bfa;
+}
+
+.review-version-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.review-version-badge {
+  padding: 3px 8px;
+  background: #1e1b4b;
+  border: 1px solid #7c3aed;
+  border-radius: 4px;
+  color: #a78bfa;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 /* ── Body (video + comments) ─────────────────────────────────────── */
 
 .review-body {

@@ -14,6 +14,7 @@ class ProcessRequest(BaseModel):
     file_id: str
     client_name: str
     project_id: Optional[str] = None
+    parent_job_id: Optional[str] = None
     wm_x: float = Field(default=50.0, ge=0, le=100)
     wm_y: float = Field(default=50.0, ge=0, le=100)
     wm_opacity: int = Field(default=30, ge=20, le=80)
@@ -36,7 +37,18 @@ class JobInfo(BaseModel):
     codec: Optional[str] = None
     fps: int = 25
     has_password: bool = False
+    version: int = 1
+    parent_job_id: Optional[str] = None
+    review_status: str = "pending_review"
     error: Optional[str] = None
+
+
+class VersionInfo(BaseModel):
+    job_id: str
+    version: int
+    filename: Optional[str] = None
+    status: JobStatus
+    created_at: Optional[str] = None
 
 
 class CreateProjectRequest(BaseModel):

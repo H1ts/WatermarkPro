@@ -14,7 +14,7 @@ from fastapi.responses import HTMLResponse, FileResponse
 
 from .config import UPLOAD_DIR, OUTPUT_DIR, HLS_DIR, REDIS_URL, BASE_URL
 from .models import (  # noqa: F401
-    ProcessRequest, JobInfo, JobStatus,
+    ProcessRequest, JobInfo, JobStatus, VersionInfo,
     CreateProjectRequest, ProjectInfo, ProjectDetail,
     SetPasswordRequest, VerifyPasswordRequest,
     CreateCommentRequest, UpdateCommentRequest, CommentInfo,
@@ -110,6 +110,9 @@ async def get_project(project_id: str):
             download_url=f"{BASE_URL}/api/download/{jid}" if is_done else None,
             codec=jdata.get(b"codec", b"mp4").decode(),
             has_password=bool(jdata.get(b"share_password_hash", b"").decode()),
+            version=int(jdata.get(b"version", b"1").decode()),
+            parent_job_id=jdata.get(b"parent_job_id", b"").decode() or None,
+            review_status=jdata.get(b"review_status", b"pending_review").decode(),
             error=jdata.get(b"error", b"").decode() or None,
         ))
     await r.aclose()
@@ -217,6 +220,17 @@ async def process(req: ProcessRequest):
     input_path = file_data[b"path"].decode()
     filename = file_data[b"filename"].decode()
 
+    # Версионность: определяем номер версии
+    version = 1
+    root_job_id = job_id  # корневой job для цепочки версий
+    now = datetime.now(timezone.utc).isoformat()
+    if req.parent_job_id:
+        parent_data = await r.hgetall(f"job:{req.parent_job_id}")
+        if parent_data:
+            parent_version = int(parent_data.get(b"version", b"1").decode())
+            version = parent_version + 1
+            root_job_id = parent_data.get(b"root_job_id", b"").decode() or req.parent_job_id
+
     job_mapping = {
         "status": "pending",
         "progress": "0",
@@ -230,12 +244,20 @@ async def process(req: ProcessRequest):
         "logo_scale": str(req.logo_scale),
         "quality": req.quality,
         "codec": req.codec,
+        "version": str(version),
+        "root_job_id": root_job_id,
+        "review_status": "pending_review",
+        "created_at": now,
     }
+    if req.parent_job_id:
+        job_mapping["parent_job_id"] = req.parent_job_id
     if req.logo_id:
         job_mapping["logo_id"] = req.logo_id
     if req.project_id:
         job_mapping["project_id"] = req.project_id
     await r.hset(f"job:{job_id}", mapping=job_mapping)
+    # Добавляем в цепочку версий
+    await r.rpush(f"versions:{root_job_id}", job_id)
     if req.project_id:
         await r.sadd(f"project:{req.project_id}:jobs", job_id)
     await r.aclose()
@@ -282,6 +304,9 @@ async def status(job_id: str):
         codec=data.get(b"codec", b"mp4").decode(),
         fps=int(data.get(b"fps", b"25").decode()),
         has_password=bool(data.get(b"share_password_hash", b"").decode()),
+        version=int(data.get(b"version", b"1").decode()),
+        parent_job_id=data.get(b"parent_job_id", b"").decode() or None,
+        review_status=data.get(b"review_status", b"pending_review").decode(),
         error=data.get(b"error", b"").decode() or None,
     )
 
@@ -384,6 +409,50 @@ async def watch(job_id: str):
     </script>
 </body>
 </html>""")
+
+
+# ── Version control ──────────────────────────────────────────────────
+
+@app.get("/versions/{job_id}")
+async def list_versions(job_id: str):
+    """Возвращает все версии для данного job (от корневого)."""
+    r = _redis()
+    # Определяем корневой job
+    data = await r.hgetall(f"job:{job_id}")
+    if not data:
+        await r.aclose()
+        raise HTTPException(status_code=404, detail="Job not found")
+    root_id = data.get(b"root_job_id", b"").decode() or job_id
+
+    # Читаем цепочку версий
+    version_ids = await r.lrange(f"versions:{root_id}", 0, -1)
+    versions = []
+    for vid_bytes in version_ids:
+        vid = vid_bytes.decode() if isinstance(vid_bytes, bytes) else vid_bytes
+        vdata = await r.hgetall(f"job:{vid}")
+        if not vdata:
+            continue
+        versions.append(VersionInfo(
+            job_id=vid,
+            version=int(vdata.get(b"version", b"1").decode()),
+            filename=vdata.get(b"filename", b"").decode() or None,
+            status=JobStatus(vdata.get(b"status", b"pending").decode()),
+            created_at=vdata.get(b"created_at", b"").decode() or None,
+        ))
+    await r.aclose()
+
+    # Если цепочка пуста (старый job без версий), возвращаем один элемент
+    if not versions:
+        versions.append(VersionInfo(
+            job_id=job_id,
+            version=int(data.get(b"version", b"1").decode()),
+            filename=data.get(b"filename", b"").decode() or None,
+            status=JobStatus(data.get(b"status", b"pending").decode()),
+            created_at=data.get(b"created_at", b"").decode() or None,
+        ))
+
+    versions.sort(key=lambda v: v.version)
+    return versions
 
 
 # ── Share password ───────────────────────────────────────────────────

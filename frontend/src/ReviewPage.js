@@ -125,6 +125,9 @@ function ReviewPage({ shareMode = false }) {
   const [passwordError, setPasswordError] = useState('');
   const [unlocked, setUnlocked] = useState(false);
 
+  // Versions
+  const [versions, setVersions] = useState([]);
+
   /* ── Fetch job ─────────────────────────────────────────────────── */
   useEffect(() => {
     (async () => {
@@ -177,6 +180,20 @@ function ReviewPage({ shareMode = false }) {
       setPasswordError('Ошибка проверки пароля');
     }
   };
+
+  /* ── Fetch versions ───────────────────────────────────────────── */
+  useEffect(() => {
+    if (!jobInfo) return;
+    (async () => {
+      try {
+        const res = await fetch(`${API}/versions/${jobId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.length > 1) setVersions(data);
+        }
+      } catch { /* ignore */ }
+    })();
+  }, [jobId, jobInfo]);
 
   /* ── Fetch comments ────────────────────────────────────────────── */
   const fetchComments = useCallback(async () => {
@@ -526,6 +543,28 @@ function ReviewPage({ shareMode = false }) {
           <button className="btn-back" onClick={() => navigate(-1)}>&#8592; Назад</button>
         )}
         <h1 className="review-title">{jobInfo.filename || 'Video'}</h1>
+        {versions.length > 1 && (
+          <div className="review-versions">
+            {versions.map((v) => (
+              <button
+                key={v.job_id}
+                className={`review-version-btn ${v.job_id === jobId ? 'review-version-btn--active' : ''}`}
+                onClick={() => {
+                  if (v.job_id !== jobId) {
+                    const base = shareMode ? '/share' : '/review';
+                    navigate(`${base}/${v.job_id}`);
+                  }
+                }}
+                disabled={v.status !== 'done'}
+              >
+                V{v.version}
+              </button>
+            ))}
+          </div>
+        )}
+        {jobInfo.version > 1 && versions.length <= 1 && (
+          <span className="review-version-badge">V{jobInfo.version}</span>
+        )}
         <span className="review-client">{jobInfo.client_name}</span>
       </header>
 
