@@ -188,30 +188,66 @@ function ReviewPage({ shareMode = false }) {
 
   useEffect(() => { fetchComments(); }, [fetchComments]);
 
+  /* ── HLS token ──────────────────────────────────────────────────── */
+  const hlsTokenRef = useRef('');
+  const tokenTimerRef = useRef(null);
+
+  const fetchHlsToken = useCallback(async () => {
+    try {
+      const res = await fetch(`${API}/hls-token/${jobId}`);
+      if (res.ok) {
+        const data = await res.json();
+        hlsTokenRef.current = data.token;
+      }
+    } catch { /* ignore */ }
+  }, [jobId]);
+
   /* ── HLS setup ─────────────────────────────────────────────────── */
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !jobInfo || jobInfo.status !== 'done') return;
 
-    const src = `/hls/${jobId}/index.m3u8`;
-    if (Hls.isSupported()) {
-      const hls = new Hls();
-      hls.loadSource(src);
-      hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        // Duration available after manifest is parsed
-        setTimeout(() => {
-          if (video.duration && isFinite(video.duration)) {
-            setDuration(video.duration);
-          }
-        }, 200);
-      });
-      hlsRef.current = hls;
-      return () => { hls.destroy(); hlsRef.current = null; };
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = src;
-    }
-  }, [jobId, jobInfo]);
+    let destroyed = false;
+
+    (async () => {
+      // Получаем токен перед загрузкой HLS
+      await fetchHlsToken();
+      if (destroyed) return;
+
+      const token = hlsTokenRef.current;
+      const src = `/hls/${jobId}/index.m3u8?token=${token}`;
+      if (Hls.isSupported()) {
+        const hls = new Hls({
+          xhrSetup: (xhr, url) => {
+            // Добавляем токен ко всем HLS-запросам
+            const sep = url.includes('?') ? '&' : '?';
+            xhr.open('GET', `${url}${sep}token=${hlsTokenRef.current}`, true);
+          },
+        });
+        hls.loadSource(src);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          setTimeout(() => {
+            if (video.duration && isFinite(video.duration)) {
+              setDuration(video.duration);
+            }
+          }, 200);
+        });
+        hlsRef.current = hls;
+
+        // Автообновление токена каждые 8 минут
+        tokenTimerRef.current = setInterval(fetchHlsToken, 8 * 60 * 1000);
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = src;
+      }
+    })();
+
+    return () => {
+      destroyed = true;
+      if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
+      if (tokenTimerRef.current) clearInterval(tokenTimerRef.current);
+    };
+  }, [jobId, jobInfo, fetchHlsToken]);
 
   /* ── Video events ──────────────────────────────────────────────── */
   // NOTE: depends on [jobInfo] because <video> is conditionally rendered

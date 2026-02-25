@@ -438,6 +438,69 @@ async def check_share_access(job_id: str):
     return {"has_password": has_pw}
 
 
+# ── HLS signed tokens ───────────────────────────────────────────────
+
+import time
+
+def _sign_hls_token(job_id: str, expires: int) -> str:
+    """Генерирует HMAC-подпись для HLS-доступа."""
+    msg = f"{job_id}:{expires}"
+    sig = hmac.new(HLS_SECRET.encode(), msg.encode(), hashlib.sha256).hexdigest()[:16]
+    return f"{expires}:{sig}"
+
+
+def _verify_hls_token(job_id: str, token: str) -> bool:
+    """Проверяет HMAC-подпись HLS-токена."""
+    try:
+        parts = token.split(":")
+        if len(parts) != 2:
+            return False
+        expires = int(parts[0])
+        if time.time() > expires:
+            return False
+        expected = _sign_hls_token(job_id, expires)
+        return hmac.compare_digest(token, expected)
+    except (ValueError, TypeError):
+        return False
+
+
+@app.get("/hls-token/{job_id}")
+async def get_hls_token(job_id: str):
+    """Выдаёт подписанный токен для HLS-доступа (10 мин)."""
+    r = _redis()
+    exists = await r.exists(f"job:{job_id}")
+    await r.aclose()
+    if not exists:
+        raise HTTPException(status_code=404, detail="Job not found")
+    expires = int(time.time()) + 600  # 10 минут
+    token = _sign_hls_token(job_id, expires)
+    return {"token": token, "expires": expires}
+
+
+from fastapi import Request, Response
+
+@app.get("/auth/hls")
+async def auth_hls(request: Request):
+    """Nginx auth_request: проверяет токен для HLS-сегментов."""
+    uri = request.headers.get("X-Original-URI", "")
+    # Извлекаем job_id из URI: /hls/{job_id}/...
+    parts = uri.strip("/").split("/")
+    if len(parts) < 2 or parts[0] != "hls":
+        return Response(status_code=403)
+
+    job_id = parts[1]
+    token = request.query_params.get("token") or request.headers.get("X-HLS-Token", "")
+
+    if not token:
+        # Проверяем cookie
+        token = request.cookies.get("hls_token", "")
+
+    if not token or not _verify_hls_token(job_id, token):
+        return Response(status_code=403)
+
+    return Response(status_code=200)
+
+
 # ── Comments (review) ────────────────────────────────────────────────
 
 @app.post("/comments")
