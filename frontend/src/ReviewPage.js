@@ -235,8 +235,10 @@ function ReviewPage({ shareMode = false }) {
       const src = `/hls/${jobId}/index.m3u8?token=${token}`;
       if (Hls.isSupported()) {
         const hls = new Hls({
+          maxBufferLength: 30,
+          maxMaxBufferLength: 60,
+          startFragPrefetch: true,
           xhrSetup: (xhr, url) => {
-            // Добавляем токен ко всем HLS-запросам
             const sep = url.includes('?') ? '&' : '?';
             xhr.open('GET', `${url}${sep}token=${hlsTokenRef.current}`, true);
           },
@@ -244,11 +246,9 @@ function ReviewPage({ shareMode = false }) {
         hls.loadSource(src);
         hls.attachMedia(video);
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          setTimeout(() => {
-            if (video.duration && isFinite(video.duration)) {
-              setDuration(video.duration);
-            }
-          }, 200);
+          if (video.duration && isFinite(video.duration)) {
+            setDuration(video.duration);
+          }
         });
         hlsRef.current = hls;
 
@@ -730,41 +730,34 @@ function ReviewPage({ shareMode = false }) {
         <div className="review-comments-panel">
           {/* Approval workflow */}
           <div className="review-approval">
-            <div className={`review-status-badge review-status--${jobInfo.review_status || 'pending_review'}`}>
-              {(jobInfo.review_status || 'pending_review') === 'pending_review' && 'На рецензии'}
-              {jobInfo.review_status === 'approved' && 'Утверждено'}
-              {jobInfo.review_status === 'needs_revision' && 'Нужны правки'}
-            </div>
-            <div className="review-approval-btns">
-              <button
-                className={`review-approve-btn ${jobInfo.review_status === 'approved' ? 'review-approve-btn--active' : ''}`}
-                onClick={async () => {
-                  const newStatus = jobInfo.review_status === 'approved' ? 'pending_review' : 'approved';
-                  const res = await fetch(`${API}/jobs/${jobId}/review-status`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ review_status: newStatus }),
-                  });
-                  if (res.ok) setJobInfo(prev => ({ ...prev, review_status: newStatus }));
-                }}
-              >
-                Утвердить
-              </button>
-              <button
-                className={`review-revision-btn ${jobInfo.review_status === 'needs_revision' ? 'review-revision-btn--active' : ''}`}
-                onClick={async () => {
-                  const newStatus = jobInfo.review_status === 'needs_revision' ? 'pending_review' : 'needs_revision';
-                  const res = await fetch(`${API}/jobs/${jobId}/review-status`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ review_status: newStatus }),
-                  });
-                  if (res.ok) setJobInfo(prev => ({ ...prev, review_status: newStatus }));
-                }}
-              >
-                Нужны правки
-              </button>
-            </div>
+            <button
+              className={`review-approve-btn ${jobInfo.review_status === 'approved' ? 'review-approve-btn--active' : ''}`}
+              onClick={async () => {
+                const newStatus = jobInfo.review_status === 'approved' ? 'pending_review' : 'approved';
+                const res = await fetch(`${API}/jobs/${jobId}/review-status`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ review_status: newStatus }),
+                });
+                if (res.ok) setJobInfo(prev => ({ ...prev, review_status: newStatus }));
+              }}
+            >
+              {jobInfo.review_status === 'approved' ? '\u2713 Утверждено' : 'Утвердить'}
+            </button>
+            <button
+              className={`review-revision-btn ${jobInfo.review_status === 'needs_revision' ? 'review-revision-btn--active' : ''}`}
+              onClick={async () => {
+                const newStatus = jobInfo.review_status === 'needs_revision' ? 'pending_review' : 'needs_revision';
+                const res = await fetch(`${API}/jobs/${jobId}/review-status`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ review_status: newStatus }),
+                });
+                if (res.ok) setJobInfo(prev => ({ ...prev, review_status: newStatus }));
+              }}
+            >
+              {jobInfo.review_status === 'needs_revision' ? '\u2717 Нужны правки' : 'Нужны правки'}
+            </button>
           </div>
 
           <div className="review-comments-header">

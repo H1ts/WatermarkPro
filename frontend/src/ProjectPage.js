@@ -662,14 +662,29 @@ function ProjectPage() {
                 <div className="job-card-actions">
                   {job.status === 'done' && (
                     <>
+                      <a href={`/share/${job.id}`} target="_blank" rel="noopener noreferrer" className="job-card-link job-card-watch">
+                        Смотреть
+                      </a>
                       <button
                         className="job-card-link job-card-share"
                         onClick={(e) => {
                           e.stopPropagation();
                           const url = job.share_url || `${window.location.origin}/share/${job.id}`;
-                          navigator.clipboard.writeText(url);
-                          e.target.textContent = 'Скопировано!';
-                          setTimeout(() => { e.target.textContent = 'Поделиться'; }, 1500);
+                          const btn = e.target;
+                          try {
+                            const ta = document.createElement('textarea');
+                            ta.value = url;
+                            ta.style.position = 'fixed';
+                            ta.style.opacity = '0';
+                            document.body.appendChild(ta);
+                            ta.select();
+                            document.execCommand('copy');
+                            document.body.removeChild(ta);
+                            btn.textContent = 'Скопировано!';
+                          } catch {
+                            btn.textContent = 'Ошибка';
+                          }
+                          setTimeout(() => { btn.textContent = 'Поделиться'; }, 1500);
                         }}
                       >
                         Поделиться

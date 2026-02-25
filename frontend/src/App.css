@@ -841,6 +841,17 @@ body {
   opacity: 0.9;
 }
 
+.job-card-watch {
+  background: transparent;
+  border: 1px solid #0096ff;
+  color: #0096ff;
+}
+
+.job-card-watch:hover {
+  background: #0a1628;
+  opacity: 1;
+}
+
 .job-card-share {
   background: transparent;
   border: 1px solid #00d26a;
@@ -1476,54 +1487,23 @@ body {
   padding: 12px 16px;
   border-bottom: 1px solid #1e1e2e;
   display: flex;
-  align-items: center;
-  gap: 12px;
+  gap: 8px;
   flex-shrink: 0;
-}
-
-.review-approval-btns {
-  display: flex;
-  gap: 6px;
-  margin-left: auto;
-}
-
-.review-status-badge {
-  padding: 4px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.review-status--pending_review {
-  background: #1a1a2e;
-  color: #8b8ba0;
-  border: 1px solid #2a2a3e;
-}
-
-.review-status--approved {
-  background: #0a2618;
-  color: #4ade80;
-  border: 1px solid #166534;
-}
-
-.review-status--needs_revision {
-  background: #2d1215;
-  color: #fca5a5;
-  border: 1px solid #7f1d1d;
 }
 
 .review-approve-btn,
 .review-revision-btn {
-  padding: 5px 14px;
-  border-radius: 6px;
-  font-size: 12px;
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
   border: 1px solid #2a2a3e;
   background: #12121a;
   color: #8b8ba0;
+  text-align: center;
 }
 
 .review-approve-btn:hover {
@@ -1548,6 +1528,24 @@ body {
   border-color: #7f1d1d;
   background: #2d1215;
   color: #fca5a5;
+}
+
+.review-status--pending_review {
+  background: #1a1a2e;
+  color: #8b8ba0;
+  border: 1px solid #2a2a3e;
+}
+
+.review-status--approved {
+  background: #0a2618;
+  color: #4ade80;
+  border: 1px solid #166534;
+}
+
+.review-status--needs_revision {
+  background: #2d1215;
+  color: #fca5a5;
+  border: 1px solid #7f1d1d;
 }
 
 /* ── Job card: name row with version + review status ─────────────── */
