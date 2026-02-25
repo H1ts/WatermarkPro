@@ -420,7 +420,7 @@ async def list_comments(job_id: str):
         comments.append(CommentInfo(
             id=cid,
             job_id=data.get(b"job_id", b"").decode(),
-            author_name=data.get(b"author_name", b"Аноним").decode(),
+            author_name=data.get(b"author_name", b"").decode() or "Аноним",
             text=data.get(b"text", b"").decode(),
             timecode=float(data.get(b"timecode", b"0").decode()),
             drawing=drawing,
