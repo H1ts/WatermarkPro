@@ -630,7 +630,17 @@ function ProjectPage() {
             {project.jobs.map((job) => (
               <div key={job.id} className="job-card">
                 <div className="job-card-info">
-                  <span className="job-card-name">{job.filename || 'video'}</span>
+                  <div className="job-card-name-row">
+                    <span className="job-card-name">{job.filename || 'video'}</span>
+                    {job.version > 1 && <span className="job-card-version">V{job.version}</span>}
+                    {job.status === 'done' && job.review_status && (
+                      <span className={`job-card-review-status review-status--${job.review_status}`}>
+                        {job.review_status === 'approved' && 'Утверждено'}
+                        {job.review_status === 'needs_revision' && 'Правки'}
+                        {job.review_status === 'pending_review' && 'На рецензии'}
+                      </span>
+                    )}
+                  </div>
                   <span className="job-card-client">{job.client_name}</span>
                 </div>
                 <div className="job-card-actions">

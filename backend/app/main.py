@@ -16,6 +16,7 @@ from .config import UPLOAD_DIR, OUTPUT_DIR, HLS_DIR, REDIS_URL, BASE_URL
 from .models import (  # noqa: F401
     ProcessRequest, JobInfo, JobStatus, VersionInfo,
     CreateProjectRequest, ProjectInfo, ProjectDetail,
+    UpdateReviewStatusRequest,
     SetPasswordRequest, VerifyPasswordRequest,
     CreateCommentRequest, UpdateCommentRequest, CommentInfo,
 )
@@ -409,6 +410,20 @@ async def watch(job_id: str):
     </script>
 </body>
 </html>""")
+
+
+# ── Review status (approval workflow) ────────────────────────────────
+
+@app.patch("/jobs/{job_id}/review-status")
+async def update_review_status(job_id: str, req: UpdateReviewStatusRequest):
+    r = _redis()
+    exists = await r.exists(f"job:{job_id}")
+    if not exists:
+        await r.aclose()
+        raise HTTPException(status_code=404, detail="Job not found")
+    await r.hset(f"job:{job_id}", "review_status", req.review_status)
+    await r.aclose()
+    return {"ok": True, "review_status": req.review_status}
 
 
 # ── Version control ──────────────────────────────────────────────────

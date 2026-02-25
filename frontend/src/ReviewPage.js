@@ -720,6 +720,45 @@ function ReviewPage({ shareMode = false }) {
 
         {/* ── Right: Comments panel ──────────────────────────────── */}
         <div className="review-comments-panel">
+          {/* Approval workflow */}
+          <div className="review-approval">
+            <div className={`review-status-badge review-status--${jobInfo.review_status || 'pending_review'}`}>
+              {(jobInfo.review_status || 'pending_review') === 'pending_review' && 'На рецензии'}
+              {jobInfo.review_status === 'approved' && 'Утверждено'}
+              {jobInfo.review_status === 'needs_revision' && 'Нужны правки'}
+            </div>
+            <div className="review-approval-btns">
+              <button
+                className={`review-approve-btn ${jobInfo.review_status === 'approved' ? 'review-approve-btn--active' : ''}`}
+                onClick={async () => {
+                  const newStatus = jobInfo.review_status === 'approved' ? 'pending_review' : 'approved';
+                  const res = await fetch(`${API}/jobs/${jobId}/review-status`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ review_status: newStatus }),
+                  });
+                  if (res.ok) setJobInfo(prev => ({ ...prev, review_status: newStatus }));
+                }}
+              >
+                Утвердить
+              </button>
+              <button
+                className={`review-revision-btn ${jobInfo.review_status === 'needs_revision' ? 'review-revision-btn--active' : ''}`}
+                onClick={async () => {
+                  const newStatus = jobInfo.review_status === 'needs_revision' ? 'pending_review' : 'needs_revision';
+                  const res = await fetch(`${API}/jobs/${jobId}/review-status`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ review_status: newStatus }),
+                  });
+                  if (res.ok) setJobInfo(prev => ({ ...prev, review_status: newStatus }));
+                }}
+              >
+                Нужны правки
+              </button>
+            </div>
+          </div>
+
           <div className="review-comments-header">
             <h2>Комментарии <span className="review-comments-count">{comments.length}</span></h2>
           </div>

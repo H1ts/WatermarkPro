@@ -69,6 +69,12 @@ class ProjectDetail(BaseModel):
     jobs: List[JobInfo] = []
 
 
+# ── Review status ─────────────────────────────────────────────────────
+
+class UpdateReviewStatusRequest(BaseModel):
+    review_status: str = Field(pattern="^(pending_review|approved|needs_revision)$")
+
+
 # ── Share password ────────────────────────────────────────────────────
 
 class SetPasswordRequest(BaseModel):

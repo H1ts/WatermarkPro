@@ -1470,6 +1470,113 @@ body {
   border-color: #7f1d1d;
 }
 
+/* ── Approval workflow ──────────────────────────────────────────── */
+
+.review-approval {
+  padding: 12px 16px;
+  border-bottom: 1px solid #1e1e2e;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.review-approval-btns {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.review-status-badge {
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.review-status--pending_review {
+  background: #1a1a2e;
+  color: #8b8ba0;
+  border: 1px solid #2a2a3e;
+}
+
+.review-status--approved {
+  background: #0a2618;
+  color: #4ade80;
+  border: 1px solid #166534;
+}
+
+.review-status--needs_revision {
+  background: #2d1215;
+  color: #fca5a5;
+  border: 1px solid #7f1d1d;
+}
+
+.review-approve-btn,
+.review-revision-btn {
+  padding: 5px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: 1px solid #2a2a3e;
+  background: #12121a;
+  color: #8b8ba0;
+}
+
+.review-approve-btn:hover {
+  border-color: #166534;
+  color: #4ade80;
+  background: #0a2618;
+}
+
+.review-approve-btn--active {
+  border-color: #166534;
+  background: #0a2618;
+  color: #4ade80;
+}
+
+.review-revision-btn:hover {
+  border-color: #7f1d1d;
+  color: #fca5a5;
+  background: #2d1215;
+}
+
+.review-revision-btn--active {
+  border-color: #7f1d1d;
+  background: #2d1215;
+  color: #fca5a5;
+}
+
+/* ── Job card: name row with version + review status ─────────────── */
+
+.job-card-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.job-card-version {
+  padding: 1px 6px;
+  background: #1e1b4b;
+  border: 1px solid #7c3aed;
+  border-radius: 3px;
+  color: #a78bfa;
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.job-card-review-status {
+  padding: 1px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
 /* ── Share password page ──────────────────────────────────────────── */
 
 .share-password-page {
