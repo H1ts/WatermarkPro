@@ -565,6 +565,14 @@ function ReviewPage({ shareMode = false }) {
         {jobInfo.version > 1 && versions.length <= 1 && (
           <span className="review-version-badge">V{jobInfo.version}</span>
         )}
+        {versions.length > 1 && (
+          <button
+            className="review-compare-btn"
+            onClick={() => navigate(`/compare/${jobId}`)}
+          >
+            Сравнить
+          </button>
+        )}
         <span className="review-client">{jobInfo.client_name}</span>
       </header>
 
