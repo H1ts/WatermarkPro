@@ -417,6 +417,13 @@ body {
   margin-bottom: 20px;
 }
 
+.result-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
 .btn-watch {
   display: inline-block;
   padding: 12px 32px;
@@ -431,6 +438,24 @@ body {
 
 .btn-watch:hover {
   opacity: 0.9;
+}
+
+.btn-download {
+  display: inline-block;
+  padding: 12px 32px;
+  background: transparent;
+  border: 1px solid #7c3aed;
+  color: #a78bfa;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 15px;
+  transition: all 0.2s;
+}
+
+.btn-download:hover {
+  background: #16162a;
+  color: #e2e2e8;
 }
 
 .link-box {
@@ -757,9 +782,12 @@ body {
   color: #6b6b80;
 }
 
-.job-card-status {
+.job-card-actions {
+  display: flex;
+  gap: 8px;
   flex-shrink: 0;
   margin-left: 12px;
+  align-items: center;
 }
 
 .job-card-link {
@@ -775,6 +803,17 @@ body {
 
 .job-card-link:hover {
   opacity: 0.9;
+}
+
+.job-card-download {
+  background: transparent;
+  border: 1px solid #7c3aed;
+  color: #a78bfa;
+}
+
+.job-card-download:hover {
+  background: #16162a;
+  opacity: 1;
 }
 
 .job-card-badge {

@@ -7,7 +7,7 @@ import aiofiles
 import redis.asyncio as redis
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 
 from .config import UPLOAD_DIR, OUTPUT_DIR, HLS_DIR, REDIS_URL, BASE_URL
 from .models import (  # noqa: F401
@@ -91,13 +91,15 @@ async def get_project(project_id: str):
         if not jdata:
             continue
         status_val = jdata.get(b"status", b"pending").decode()
+        is_done = status_val == "done"
         jobs.append(JobInfo(
             id=jid,
             status=JobStatus(status_val),
             progress=int(jdata.get(b"progress", b"0").decode()),
             filename=jdata.get(b"filename", b"").decode() or None,
             client_name=jdata.get(b"client_name", b"").decode() or None,
-            watch_url=f"{BASE_URL}/watch/{jid}" if status_val == "done" else None,
+            watch_url=f"{BASE_URL}/watch/{jid}" if is_done else None,
+            download_url=f"{BASE_URL}/api/download/{jid}" if is_done else None,
             error=jdata.get(b"error", b"").decode() or None,
         ))
     await r.aclose()
@@ -252,14 +254,43 @@ async def status(job_id: str):
     if not data:
         raise HTTPException(status_code=404, detail="Job not found")
 
+    is_done = data.get(b"status") == b"done"
     return JobInfo(
         id=job_id,
         status=JobStatus(data.get(b"status", b"pending").decode()),
         progress=int(data.get(b"progress", b"0").decode()),
         filename=data.get(b"filename", b"").decode() or None,
         client_name=data.get(b"client_name", b"").decode() or None,
-        watch_url=f"{BASE_URL}/watch/{job_id}" if data.get(b"status") == b"done" else None,
+        watch_url=f"{BASE_URL}/watch/{job_id}" if is_done else None,
+        download_url=f"{BASE_URL}/api/download/{job_id}" if is_done else None,
         error=data.get(b"error", b"").decode() or None,
+    )
+
+
+@app.get("/download/{job_id}")
+async def download(job_id: str):
+    r = _redis()
+    data = await r.hgetall(f"job:{job_id}")
+    await r.aclose()
+
+    if not data:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    if data.get(b"status", b"").decode() != "done":
+        raise HTTPException(status_code=400, detail="Video is still processing")
+
+    mp4_path = os.path.join(OUTPUT_DIR, f"{job_id}.mp4")
+    if not os.path.isfile(mp4_path):
+        raise HTTPException(status_code=404, detail="File not found on disk")
+
+    filename = data.get(b"filename", b"video.mp4").decode()
+    if not filename.lower().endswith(".mp4"):
+        filename = os.path.splitext(filename)[0] + ".mp4"
+
+    return FileResponse(
+        mp4_path,
+        media_type="video/mp4",
+        filename=filename,
     )
 
 

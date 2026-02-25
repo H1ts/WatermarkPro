@@ -19,6 +19,7 @@ function ProjectPage() {
   const [wmOpacity, setWmOpacity] = useState(30);
   const [wmFontSize, setWmFontSize] = useState(48);
   const [logoFile, setLogoFile] = useState(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState(null);
   const [logoId, setLogoId] = useState(null);
   const [logoScale, setLogoScale] = useState(25);
   const [logoUploading, setLogoUploading] = useState(false);
@@ -29,6 +30,7 @@ function ProjectPage() {
   const [jobStatus, setJobStatus] = useState(null);
   const [jobProgress, setJobProgress] = useState(0);
   const [watchUrl, setWatchUrl] = useState(null);
+  const [downloadUrl, setDownloadUrl] = useState(null);
   const [error, setError] = useState(null);
   const [dragOver, setDragOver] = useState(false);
   const pollRef = useRef(null);
@@ -72,6 +74,7 @@ function ProjectPage() {
     setJobStatus(null);
     setJobProgress(0);
     setWatchUrl(null);
+    setDownloadUrl(null);
     setError(null);
     setUploadProgress(0);
   };
@@ -88,6 +91,7 @@ function ProjectPage() {
       return;
     }
     setLogoFile(selected);
+    setLogoPreviewUrl(URL.createObjectURL(selected));
     setLogoUploading(true);
     setError(null);
     try {
@@ -100,13 +104,16 @@ function ProjectPage() {
     } catch (err) {
       setError(err.message);
       setLogoFile(null);
+      setLogoPreviewUrl(null);
     } finally {
       setLogoUploading(false);
     }
   };
 
   const removeLogo = () => {
+    if (logoPreviewUrl) URL.revokeObjectURL(logoPreviewUrl);
     setLogoFile(null);
+    setLogoPreviewUrl(null);
     setLogoId(null);
   };
 
@@ -251,6 +258,7 @@ function ProjectPage() {
         setJobProgress(data.progress);
         if (data.status === 'done') {
           setWatchUrl(data.watch_url);
+          setDownloadUrl(data.download_url);
           clearInterval(pollRef.current);
           fetchProject(); // refresh job list
         }
@@ -370,8 +378,8 @@ function ProjectPage() {
                   <span
                     className="wm-preview-timecode"
                     style={{
-                      fontSize: `${Math.max(8, Math.round(36 * previewWidth / 1920))}px`,
-                      opacity: Math.min((1 - wmOpacity / 100) + 0.4, 1),
+                      fontSize: `${Math.max(10, Math.round(36 * previewWidth / 1920 * 1.5))}px`,
+                      opacity: Math.max(0.35, Math.min((1 - wmOpacity / 100) + 0.4, 1)),
                     }}
                   >
                     00:00:00:00
@@ -381,26 +389,26 @@ function ProjectPage() {
                     style={{
                       left: `${wmX}%`,
                       top: `${wmY}%`,
-                      gap: `${Math.max(2, Math.round(Math.max(10, wmFontSize / 4) * previewWidth / 1920))}px`,
+                      gap: `${Math.max(4, Math.round(Math.max(10, wmFontSize / 4) * previewWidth / 1920 * 1.5))}px`,
                     }}
                   >
                     <span
                       className="wm-preview-text"
                       style={{
-                        fontSize: `${Math.max(8, Math.round(wmFontSize * previewWidth / 1920))}px`,
-                        opacity: 1 - wmOpacity / 100,
+                        fontSize: `${Math.max(10, Math.round(wmFontSize * previewWidth / 1920 * 1.5))}px`,
+                        opacity: Math.max(0.3, 1 - wmOpacity / 100),
                       }}
                     >
                       {clientName.trim() || 'ФИО'}
                     </span>
-                    {logoFile && (
+                    {logoFile && logoPreviewUrl && (
                       <img
-                        src={URL.createObjectURL(logoFile)}
+                        src={logoPreviewUrl}
                         alt=""
                         className="wm-preview-logo"
                         style={{
-                          width: `${Math.round(previewWidth * logoScale / 100)}px`,
-                          opacity: 1 - wmOpacity / 100,
+                          width: `${Math.max(30, Math.round(previewWidth * logoScale / 100))}px`,
+                          opacity: Math.max(0.3, 1 - wmOpacity / 100),
                         }}
                       />
                     )}
@@ -434,7 +442,7 @@ function ProjectPage() {
                 <label>Лого (PNG, JPG, WebP, до 5 МБ)</label>
                 {logoFile ? (
                   <div className="logo-preview">
-                    <img src={URL.createObjectURL(logoFile)} alt="Logo preview" className="logo-thumb" />
+                    <img src={logoPreviewUrl} alt="Logo preview" className="logo-thumb" />
                     <span className="logo-name">{logoFile.name}</span>
                     <button type="button" className="logo-remove" onClick={removeLogo}>&#10005;</button>
                   </div>
@@ -498,9 +506,16 @@ function ProjectPage() {
           <div className="result">
             <span className="result-icon">&#10003;</span>
             <h2>Готово!</h2>
-            <a href={watchUrl} target="_blank" rel="noopener noreferrer" className="btn-watch">
-              Открыть плеер
-            </a>
+            <div className="result-actions">
+              <a href={watchUrl} target="_blank" rel="noopener noreferrer" className="btn-watch">
+                Открыть плеер
+              </a>
+              {downloadUrl && (
+                <a href={downloadUrl} download className="btn-download">
+                  Скачать MP4
+                </a>
+              )}
+            </div>
             <div className="link-box">
               <input readOnly value={watchUrl} onClick={(e) => e.target.select()} />
               <button onClick={() => navigator.clipboard.writeText(watchUrl)}>Копировать</button>
@@ -527,11 +542,16 @@ function ProjectPage() {
                   <span className="job-card-name">{job.filename || 'video'}</span>
                   <span className="job-card-client">{job.client_name}</span>
                 </div>
-                <div className="job-card-status">
+                <div className="job-card-actions">
                   {job.status === 'done' && (
-                    <a href={job.watch_url} target="_blank" rel="noopener noreferrer" className="job-card-link">
-                      Смотреть
-                    </a>
+                    <>
+                      <a href={job.download_url} download className="job-card-link job-card-download">
+                        Скачать
+                      </a>
+                      <a href={job.watch_url} target="_blank" rel="noopener noreferrer" className="job-card-link">
+                        Смотреть
+                      </a>
+                    </>
                   )}
                   {job.status === 'processing' && <span className="job-card-badge badge-processing">Обработка</span>}
                   {job.status === 'pending' && <span className="job-card-badge badge-pending">В очереди</span>}
