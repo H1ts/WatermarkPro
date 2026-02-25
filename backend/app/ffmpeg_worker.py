@@ -154,7 +154,7 @@ async def process_video(job_id: str, input_path: str, client_name: str,
         qp = QUALITY_PRESETS.get(quality, QUALITY_PRESETS["medium"])
 
         cmd = [
-            "ffmpeg", "-y", "-i", input_path,
+            "ffmpeg", "-y", "-loglevel", "warning", "-i", input_path,
             *extra_inputs,
             filter_flag, filter_val,
             "-c:v", "libx264", "-preset", qp["preset"], "-crf", qp["crf"],
@@ -170,6 +170,18 @@ async def process_video(job_id: str, input_path: str, client_name: str,
             stderr=asyncio.subprocess.PIPE,
         )
 
+        # Drain stderr concurrently to prevent pipe buffer deadlock
+        async def _drain(stream):
+            chunks = []
+            while True:
+                chunk = await stream.read(8192)
+                if not chunk:
+                    break
+                chunks.append(chunk)
+            return b"".join(chunks)
+
+        stderr_task = asyncio.create_task(_drain(proc.stderr))
+
         while True:
             line = await proc.stdout.readline()
             if not line:
@@ -181,9 +193,9 @@ async def process_video(job_id: str, input_path: str, client_name: str,
                 progress = min(int((current_sec / duration) * 80), 80)
                 await r.hset(f"job:{job_id}", "progress", str(progress))
 
+        stderr_out = await stderr_task
         await proc.wait()
         if proc.returncode != 0:
-            stderr_out = await proc.stderr.read()
             raise RuntimeError(f"FFmpeg encode failed: {stderr_out.decode()[:500]}")
 
         await r.hset(f"job:{job_id}", "progress", "85")
