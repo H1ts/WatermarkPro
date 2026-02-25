@@ -873,10 +873,11 @@ body {
    ══════════════════════════════════════════════════════════════════════ */
 
 .review-page {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   background: #0a0a0f;
+  overflow: hidden;
 }
 
 .review-loading {

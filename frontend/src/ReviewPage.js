@@ -167,12 +167,13 @@ function ReviewPage() {
   }, [jobId, jobInfo]);
 
   /* ── Video events ──────────────────────────────────────────────── */
+  // NOTE: depends on [jobInfo] because <video> is conditionally rendered
+  // only after jobInfo loads — with [] the effect runs when video is null
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
     const onTime = () => {
       setCurrentTime(v.currentTime);
-      // HLS sometimes only exposes duration after playback starts
       if (v.duration && isFinite(v.duration) && v.duration > 0) {
         setDuration(v.duration);
       }
@@ -196,7 +197,7 @@ function ReviewPage() {
       v.removeEventListener('play', onPlay);
       v.removeEventListener('pause', onPause);
     };
-  }, []);
+  }, [jobInfo]);
 
   /* ── Canvas resize ─────────────────────────────────────────────── */
   useEffect(() => {
