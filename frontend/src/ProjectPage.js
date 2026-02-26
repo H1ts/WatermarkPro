@@ -14,6 +14,7 @@ function ProjectPage() {
   // Upload & process state
   const [file, setFile] = useState(null);
   const [clientName, setClientName] = useState('');
+  const [notifyEmail, setNotifyEmail] = useState('');
   const [wmX, setWmX] = useState(50);
   const [wmY, setWmY] = useState(50);
   const [wmOpacity, setWmOpacity] = useState(30);
@@ -85,11 +86,11 @@ function ProjectPage() {
     const selected = e.target.files[0];
     if (!selected) return;
     if (selected.size > 5 * 1024 * 1024) {
-      setError('Logo too large (max 5 MB)');
+      setError('Лого слишком большое (макс. 5 МБ)');
       return;
     }
     if (!selected.type.startsWith('image/')) {
-      setError('Please select an image file (PNG, JPG, WebP)');
+      setError('Выберите изображение (PNG, JPG, WebP)');
       return;
     }
     setLogoFile(selected);
@@ -184,7 +185,7 @@ function ProjectPage() {
 
   const upload = async () => {
     if (!file || !clientName.trim()) {
-      setError('Выберите файл и введите имя клиента');
+      setError('Выберите файл и введите текст для ватермарка');
       return;
     }
     setError(null);
@@ -339,10 +340,10 @@ function ProjectPage() {
                 hidden
               />
               {file ? (
-                <div className="file-info">
-                  <span className="file-icon">&#127916;</span>
-                  <span className="file-name">{file.name}</span>
-                  <span className="file-size">{formatSize(file.size)}</span>
+                <div className="drop-hint">
+                  <span className="drop-icon">&#127916;</span>
+                  <p className="file-name">{file.name}</p>
+                  <p className="drop-sub">{formatSize(file.size)} &middot; Нажмите чтобы заменить</p>
                 </div>
               ) : (
                 <div className="drop-hint">
@@ -354,18 +355,49 @@ function ProjectPage() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="client-name">Имя клиента (текст watermark)</label>
+              <label htmlFor="client-name">Текст для ватермарка</label>
               <input
                 id="client-name"
                 type="text"
-                placeholder="Иванов Иван Иванович"
+                placeholder="Любой текст для наложения"
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
               />
             </div>
 
-            <div className="wm-settings">
-              <h3 className="wm-settings-title">Настройки watermark</h3>
+            {/* Output settings — quality + format */}
+            <div className="wm-settings wm-settings--compact">
+              <h3 className="wm-settings-title">Настройки вывода</h3>
+              <div className="wm-row-inline">
+                <div className="wm-row-inline-item">
+                  <label>Качество</label>
+                  <select
+                    className="wm-select"
+                    value={quality}
+                    onChange={(e) => setQuality(e.target.value)}
+                  >
+                    <option value="low">Низкое (быстро)</option>
+                    <option value="medium">Среднее</option>
+                    <option value="high">Лучшее (медленно)</option>
+                  </select>
+                </div>
+                <div className="wm-row-inline-item">
+                  <label>Формат</label>
+                  <select
+                    className="wm-select"
+                    value={codec}
+                    onChange={(e) => setCodec(e.target.value)}
+                  >
+                    <option value="mp4">MP4</option>
+                    <option value="mov">MOV</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Watermark settings */}
+            <div className="wm-settings wm-settings--compact">
+              <h3 className="wm-settings-title">Настройки ватермарка</h3>
 
               <div className="wm-row">
                 <label>Позиция (перетащите метку)</label>
@@ -388,58 +420,61 @@ function ProjectPage() {
                   >
                     00:00:00:00
                   </span>
-                  <div
-                    className="wm-preview-marker"
-                    style={{
-                      left: `${wmX}%`,
-                      top: `${wmY}%`,
-                      gap: `${Math.max(4, Math.round(Math.max(10, wmFontSize / 4) * previewWidth / 1920 * 1.5))}px`,
-                    }}
-                  >
-                    <span
-                      className="wm-preview-text"
+                  {(clientName.trim() || (logoFile && logoPreviewUrl)) && (
+                    <div
+                      className="wm-preview-marker"
                       style={{
-                        fontSize: `${Math.max(10, Math.round(wmFontSize * previewWidth / 1920 * 1.5))}px`,
-                        opacity: Math.max(0.3, 1 - wmOpacity / 100),
+                        left: `${wmX}%`,
+                        top: `${wmY}%`,
+                        gap: '0px',
                       }}
                     >
-                      {clientName.trim() || 'ФИО'}
-                    </span>
-                    {logoFile && logoPreviewUrl && (
-                      <img
-                        src={logoPreviewUrl}
-                        alt=""
-                        className="wm-preview-logo"
-                        style={{
-                          width: `${Math.max(30, Math.round(previewWidth * logoScale / 100))}px`,
-                          opacity: Math.max(0.3, 1 - wmOpacity / 100),
-                        }}
-                      />
-                    )}
-                  </div>
+                      {clientName.trim() && (
+                        <span
+                          className="wm-preview-text"
+                          style={{
+                            fontSize: `${Math.max(10, Math.round(wmFontSize * previewWidth / 1920 * 1.5))}px`,
+                            opacity: Math.max(0.3, 1 - wmOpacity / 100),
+                          }}
+                        >
+                          {clientName.trim()}
+                        </span>
+                      )}
+                      {logoFile && logoPreviewUrl && (
+                        <img
+                          src={logoPreviewUrl}
+                          alt=""
+                          className="wm-preview-logo"
+                          style={{
+                            width: `${Math.max(30, Math.round(previewWidth * logoScale / 100))}px`,
+                            opacity: Math.max(0.3, 1 - wmOpacity / 100),
+                          }}
+                        />
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="wm-row">
-                <label>Прозрачность: {wmOpacity}%</label>
-                <input
-                  type="range" min="20" max="80"
-                  value={wmOpacity}
-                  onChange={(e) => setWmOpacity(Number(e.target.value))}
-                  className="wm-slider"
-                />
-                <div className="wm-range-labels"><span>20%</span><span>80%</span></div>
-              </div>
-
-              <div className="wm-row">
-                <label>Размер шрифта: {wmFontSize}px</label>
-                <input
-                  type="range" min="16" max="120"
-                  value={wmFontSize}
-                  onChange={(e) => setWmFontSize(Number(e.target.value))}
-                  className="wm-slider"
-                />
-                <div className="wm-range-labels"><span>16px</span><span>120px</span></div>
+              <div className="wm-row-inline">
+                <div className="wm-row-inline-item">
+                  <label>Прозрачность: {wmOpacity}%</label>
+                  <input
+                    type="range" min="20" max="80"
+                    value={wmOpacity}
+                    onChange={(e) => setWmOpacity(Number(e.target.value))}
+                    className="wm-slider"
+                  />
+                </div>
+                <div className="wm-row-inline-item">
+                  <label>Шрифт: {wmFontSize}px</label>
+                  <input
+                    type="range" min="16" max="120"
+                    value={wmFontSize}
+                    onChange={(e) => setWmFontSize(Number(e.target.value))}
+                    className="wm-slider"
+                  />
+                </div>
               </div>
 
               <div className="wm-row">
@@ -474,45 +509,6 @@ function ProjectPage() {
                   <div className="wm-range-labels"><span>10%</span><span>50%</span></div>
                 </div>
               )}
-
-              <div className="wm-row">
-                <label>Качество</label>
-                <div className="option-group">
-                  {[
-                    { value: 'low', label: 'Низкое' },
-                    { value: 'medium', label: 'Среднее' },
-                    { value: 'high', label: 'Лучшее' },
-                  ].map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      className={`option-btn ${quality === opt.value ? 'option-btn--active' : ''}`}
-                      onClick={() => setQuality(opt.value)}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="wm-row">
-                <label>Формат</label>
-                <div className="option-group">
-                  {[
-                    { value: 'mp4', label: 'MP4' },
-                    { value: 'mov', label: 'MOV' },
-                  ].map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      className={`option-btn ${codec === opt.value ? 'option-btn--active' : ''}`}
-                      onClick={() => setCodec(opt.value)}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
 
             <button
@@ -563,6 +559,25 @@ function ProjectPage() {
               <input readOnly value={watchUrl} onClick={(e) => e.target.select()} />
               <button onClick={() => navigator.clipboard.writeText(watchUrl)}>Копировать</button>
             </div>
+            <div className="notify-email-box">
+              <label>Email для уведомлений</label>
+              <div className="notify-email-row">
+                <input
+                  type="email"
+                  placeholder="user@example.com"
+                  value={notifyEmail}
+                  onChange={(e) => setNotifyEmail(e.target.value)}
+                  className="notify-email-input"
+                />
+                <button
+                  className="notify-email-btn"
+                  disabled={!notifyEmail.trim() || !notifyEmail.includes('@')}
+                  onClick={() => { /* TODO: backend endpoint */ alert('Уведомления включены для ' + notifyEmail); }}
+                >
+                  Подписаться
+                </button>
+              </div>
+            </div>
             <button className="btn-new" onClick={resetForm}>Загрузить ещё</button>
           </div>
         )}
@@ -579,29 +594,32 @@ function ProjectPage() {
         {project.jobs && project.jobs.length > 0 && !isProcessing && (
           <div className="job-history">
             <h3 className="job-history-title">Файлы проекта</h3>
-            {project.jobs.map((job) => (
-              <div key={job.id} className="job-card">
-                <div className="job-card-info">
-                  <span className="job-card-name">{job.filename || 'video'}</span>
-                  <span className="job-card-client">{job.client_name}</span>
+            <div className="job-grid">
+              {project.jobs.map((job) => (
+                <div
+                  key={job.id}
+                  className={`job-thumb-card ${job.status === 'done' ? 'job-thumb-card--clickable' : ''}`}
+                  onClick={() => job.status === 'done' && navigate(`/review/${job.id}`)}
+                >
+                  <div className="job-thumb-preview">
+                    <span className="job-thumb-icon">&#127916;</span>
+                    {job.status !== 'done' && (
+                      <span className={`job-thumb-badge ${
+                        job.status === 'processing' ? 'badge-processing' :
+                        job.status === 'pending' ? 'badge-pending' : 'badge-error'
+                      }`}>
+                        {job.status === 'processing' ? 'Обработка...' :
+                         job.status === 'pending' ? 'В очереди' : 'Ошибка'}
+                      </span>
+                    )}
+                  </div>
+                  <div className="job-thumb-info">
+                    <span className="job-thumb-name">{job.filename || 'video'}</span>
+                    <span className="job-thumb-client">{job.client_name}</span>
+                  </div>
                 </div>
-                <div className="job-card-actions">
-                  {job.status === 'done' && (
-                    <>
-                      <a href={job.download_url} download className="job-card-link job-card-download">
-                        Скачать {(job.codec || 'mp4').toUpperCase()}
-                      </a>
-                      <a href={`/review/${job.id}`} className="job-card-link">
-                        Рецензировать
-                      </a>
-                    </>
-                  )}
-                  {job.status === 'processing' && <span className="job-card-badge badge-processing">Обработка</span>}
-                  {job.status === 'pending' && <span className="job-card-badge badge-pending">В очереди</span>}
-                  {job.status === 'error' && <span className="job-card-badge badge-error">Ошибка</span>}
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
       </main>

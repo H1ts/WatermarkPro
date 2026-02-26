@@ -116,7 +116,7 @@ function Dashboard() {
                   <h3 className="project-card-name">{p.name}</h3>
                   <div className="project-card-meta">
                     <span>{formatDate(p.created_at)}</span>
-                    <span>{p.job_count} {p.job_count === 1 ? 'файл' : 'файлов'}</span>
+                    <span>{p.job_count} {p.job_count === 1 ? 'файл' : p.job_count >= 2 && p.job_count <= 4 ? 'файла' : 'файлов'}</span>
                   </div>
                 </div>
                 <button
@@ -163,10 +163,9 @@ function Dashboard() {
                 Отмена
               </button>
               <button
-                className="btn-process"
+                className="btn-modal-submit"
                 onClick={createProject}
                 disabled={!newName.trim() || creating}
-                style={{ width: 'auto', marginTop: 0, padding: '10px 24px' }}
               >
                 {creating ? 'Создание...' : 'Создать'}
               </button>
