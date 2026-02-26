@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import Hls from 'hls.js';
 
 const API = '/api';
 
@@ -42,6 +43,8 @@ function ProjectPage() {
   const videoPreviewRef = useRef(null);
   const draggingRef = useRef(false);
   const [previewWidth, setPreviewWidth] = useState(0);
+  const resultVideoRef = useRef(null);
+  const resultHlsRef = useRef(null);
 
   // Fetch project data
   const fetchProject = useCallback(async () => {
@@ -291,6 +294,23 @@ function ProjectPage() {
 
     return () => clearInterval(pollRef.current);
   }, [jobId, jobStatus, fetchProject]);
+
+  // Setup HLS player when result is ready
+  useEffect(() => {
+    const video = resultVideoRef.current;
+    if (!video || jobStatus !== 'done' || !jobId) return;
+
+    const src = `/hls/${jobId}/index.m3u8`;
+    if (Hls.isSupported()) {
+      const hls = new Hls();
+      hls.loadSource(src);
+      hls.attachMedia(video);
+      resultHlsRef.current = hls;
+      return () => { hls.destroy(); resultHlsRef.current = null; };
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = src;
+    }
+  }, [jobId, jobStatus]);
 
   const isProcessing = jobStatus === 'pending' || jobStatus === 'processing';
 
@@ -589,45 +609,39 @@ function ProjectPage() {
             </div>
           )}
 
-          {/* Result */}
+          {/* Result — embedded HLS player */}
           {jobStatus === 'done' && watchUrl && (
-            <div className="result">
-              <span className="result-icon">&#10003;</span>
-              <h2>Готово!</h2>
-              <div className="result-actions">
-                <a href={`/review/${jobId}`} className="btn-watch">
-                  Рецензировать
-                </a>
-                {downloadUrl && (
-                  <a href={downloadUrl} download className="btn-download">
-                    Скачать {codec.toUpperCase()}
+            <div className="result-player">
+              {/* HLS video player */}
+              <div className="result-video-wrap">
+                <video
+                  ref={resultVideoRef}
+                  className="result-video"
+                  controls
+                  playsInline
+                  autoPlay
+                  onContextMenu={(e) => e.preventDefault()}
+                />
+              </div>
+
+              {/* Actions below player */}
+              <div className="result-bar">
+                <div className="result-actions">
+                  <a href={`/review/${jobId}`} className="btn-watch">
+                    Рецензировать
                   </a>
-                )}
-              </div>
-              <div className="link-box">
-                <input readOnly value={watchUrl} onClick={(e) => e.target.select()} />
-                <button onClick={() => navigator.clipboard.writeText(watchUrl)}>Копировать</button>
-              </div>
-              <div className="notify-email-box">
-                <label>Email для уведомлений</label>
-                <div className="notify-email-row">
-                  <input
-                    type="email"
-                    placeholder="user@example.com"
-                    value={notifyEmail}
-                    onChange={(e) => setNotifyEmail(e.target.value)}
-                    className="notify-email-input"
-                  />
-                  <button
-                    className="notify-email-btn"
-                    disabled={!notifyEmail.trim() || !notifyEmail.includes('@')}
-                    onClick={() => { alert('Уведомления включены для ' + notifyEmail); }}
-                  >
-                    Подписаться
-                  </button>
+                  {downloadUrl && (
+                    <a href={downloadUrl} download className="btn-download">
+                      Скачать {codec.toUpperCase()}
+                    </a>
+                  )}
+                  <button className="btn-secondary" onClick={resetForm}>Загрузить ещё</button>
+                </div>
+                <div className="link-box">
+                  <input readOnly value={watchUrl} onClick={(e) => e.target.select()} />
+                  <button onClick={() => navigator.clipboard.writeText(watchUrl)}>Копировать</button>
                 </div>
               </div>
-              <button className="btn-new" onClick={resetForm}>Загрузить ещё</button>
             </div>
           )}
 

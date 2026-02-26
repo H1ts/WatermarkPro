@@ -471,33 +471,36 @@ body {
   font-weight: 700;
 }
 
-/* ── Result ────────────────────────────────────────────────────────── */
+/* ── Result player ─────────────────────────────────────────────────── */
 
-.result {
-  text-align: center;
-  padding: 40px 0;
+.result-player {
+  display: flex;
+  flex-direction: column;
 }
 
-.result-icon {
-  display: inline-block;
-  width: 48px;
-  height: 48px;
-  line-height: 48px;
-  border-radius: 50%;
-  background: #e8f5e9;
-  color: #2e7d32;
-  font-size: 24px;
-  margin-bottom: 12px;
+.result-video-wrap {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #1a1a1a;
+  border: 2px solid #e53935;
+  border-radius: 4px;
+  overflow: hidden;
 }
 
-.result h2 {
-  margin-bottom: 16px;
+.result-video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+}
+
+.result-bar {
+  margin-top: 12px;
 }
 
 .result-actions {
   display: flex;
   gap: 10px;
-  justify-content: center;
   flex-wrap: wrap;
 }
 
