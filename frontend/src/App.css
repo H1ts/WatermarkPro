@@ -7,7 +7,7 @@
 body {
   background: #0a0a0f;
   color: #e2e2e8;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 .app {
@@ -1835,9 +1835,854 @@ body {
   transition: width 0.15s linear;
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+   ProjectPage — 3-column layout (white theme, red borders)
+   ══════════════════════════════════════════════════════════════════════ */
+
+.pp {
+  min-height: 100vh;
+  background: #ffffff;
+  color: #111111;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Header ─────────────────────────────────────────────────────── */
+
+.pp-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 24px;
+  border-bottom: 2px solid #e53935;
+  background: #fff;
+}
+
+.pp-back {
+  background: none;
+  border: none;
+  color: #555;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.2s;
+}
+
+.pp-back:hover {
+  color: #e53935;
+}
+
+.pp-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #111;
+}
+
+/* ── Error toast ─────────────────────────────────────────────────── */
+
+.pp-error {
+  margin: 12px 24px 0;
+  padding: 12px 16px;
+  background: #fff5f5;
+  border: 1px solid #e53935;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pp-error p {
+  color: #c62828;
+  font-size: 14px;
+}
+
+.pp-error button {
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+/* ── 3-column body ──────────────────────────────────────────────── */
+
+.pp-body {
+  display: grid;
+  grid-template-columns: 280px 1fr 300px;
+  gap: 20px;
+  padding: 20px 24px;
+  flex: 1;
+  min-height: 0;
+  align-items: start;
+}
+
+/* ── Left column ────────────────────────────────────────────────── */
+
+.pp-left {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Center column ──────────────────────────────────────────────── */
+
+.pp-center {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* ── Right column ───────────────────────────────────────────────── */
+
+.pp-right {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Panel (shared box) ─────────────────────────────────────────── */
+
+.pp-panel {
+  border: 2px solid #e53935;
+  border-radius: 10px;
+  padding: 16px;
+  background: #fff;
+}
+
+.pp-panel-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #111;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+/* ── Fields ──────────────────────────────────────────────────────── */
+
+.pp-field {
+  margin-bottom: 14px;
+}
+
+.pp-field:last-child {
+  margin-bottom: 0;
+}
+
+.pp-field label {
+  display: block;
+  font-size: 13px;
+  color: #555;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.pp-field input[type="text"],
+.pp-field input[type="email"] {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e53935;
+  border-radius: 6px;
+  background: #fff;
+  color: #111;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.pp-field input[type="text"]:focus,
+.pp-field input[type="email"]:focus {
+  border-color: #c62828;
+  box-shadow: 0 0 0 2px rgba(229, 57, 53, 0.15);
+}
+
+/* ── Slider ──────────────────────────────────────────────────────── */
+
+.pp-slider {
+  width: 100%;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #ddd;
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.pp-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #e53935;
+  cursor: pointer;
+}
+
+.pp-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #e53935;
+  border: none;
+  cursor: pointer;
+}
+
+.pp-range-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #999;
+}
+
+/* ── Watermark preview (16:9) ────────────────────────────────────── */
+
+.pp-wm-preview {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #222;
+  border: 2px solid #e53935;
+  border-radius: 6px;
+  cursor: crosshair;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+.pp-wm-tc {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #fff;
+  font-weight: 600;
+  font-family: monospace;
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.pp-wm-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+
+.pp-wm-text {
+  color: #fff;
+  font-weight: 600;
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+
+.pp-wm-logo {
+  object-fit: contain;
+}
+
+/* ── Logo upload ────────────────────────────────────────────────── */
+
+.pp-logo-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border: 1px solid #e53935;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.pp-logo-thumb {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  border-radius: 4px;
+  background: #f5f5f5;
+}
+
+.pp-logo-name {
+  flex: 1;
+  font-size: 13px;
+  color: #555;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pp-logo-remove {
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 8px;
+  transition: color 0.2s;
+}
+
+.pp-logo-remove:hover {
+  color: #e53935;
+}
+
+/* ── Dropzone ────────────────────────────────────────────────────── */
+
+.pp-dropzone {
+  border: 2px dashed #e53935;
+  border-radius: 12px;
+  padding: 60px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #fafafa;
+  min-height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pp-dropzone:hover,
+.pp-dropzone--active {
+  border-color: #c62828;
+  background: #fff5f5;
+}
+
+.pp-dropzone--has-file {
+  border-style: solid;
+  border-color: #e53935;
+  padding: 0;
+  cursor: default;
+}
+
+.pp-drop-hint {
+  color: #888;
+}
+
+.pp-drop-icon {
+  font-size: 48px;
+  display: block;
+  margin-bottom: 8px;
+  color: #e53935;
+}
+
+.pp-drop-sub {
+  font-size: 13px;
+  margin-top: 4px;
+  color: #aaa;
+}
+
+/* ── Video preview (in dropzone) ─────────────────────────────────── */
+
+.pp-video-preview {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.pp-video-player {
+  width: 100%;
+  max-height: 400px;
+  display: block;
+  border-radius: 10px 10px 0 0;
+  background: #000;
+  object-fit: contain;
+}
+
+.pp-file-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #f5f5f5;
+  border-top: 1px solid #eee;
+  border-radius: 0 0 10px 10px;
+}
+
+.pp-file-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: #111;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.pp-file-size {
+  font-size: 13px;
+  color: #888;
+  flex-shrink: 0;
+}
+
+.pp-file-change {
+  padding: 5px 12px;
+  border: 1px solid #e53935;
+  border-radius: 5px;
+  background: #fff;
+  color: #e53935;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.pp-file-change:hover {
+  background: #e53935;
+  color: #fff;
+}
+
+.pp-file-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+}
+
+.pp-file-icon {
+  font-size: 24px;
+}
+
+/* ── Option buttons (quality, format) ────────────────────────────── */
+
+.pp-options {
+  display: flex;
+  gap: 8px;
+}
+
+.pp-opt-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fff;
+  color: #555;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pp-opt-btn:hover {
+  border-color: #e53935;
+  color: #111;
+}
+
+.pp-opt-btn--active {
+  border-color: #e53935;
+  background: #fff5f5;
+  color: #c62828;
+  font-weight: 600;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────── */
+
+.pp-btn-process {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 10px;
+  background: #e53935;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.pp-btn-process:hover:not(:disabled) {
+  background: #c62828;
+}
+
+.pp-btn-process:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pp-btn-primary {
+  display: inline-block;
+  padding: 12px 32px;
+  background: #e53935;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 15px;
+  transition: background 0.2s;
+}
+
+.pp-btn-primary:hover {
+  background: #c62828;
+}
+
+.pp-btn-outline {
+  display: inline-block;
+  padding: 10px 20px;
+  border: 1px solid #e53935;
+  border-radius: 8px;
+  background: #fff;
+  color: #e53935;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.pp-btn-outline:hover {
+  background: #fff5f5;
+}
+
+.pp-btn-outline:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Progress ────────────────────────────────────────────────────── */
+
+.pp-progress {
+  height: 6px;
+  background: #eee;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.pp-progress-fill {
+  height: 100%;
+  background: #e53935;
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+
+.pp-progress-fill--render {
+  background: linear-gradient(90deg, #e53935, #ff7043);
+}
+
+/* ── Processing ──────────────────────────────────────────────────── */
+
+.pp-processing {
+  text-align: center;
+  padding: 60px 0;
+}
+
+.pp-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid #eee;
+  border-top-color: #e53935;
+  border-radius: 50%;
+  margin: 0 auto 20px;
+  animation: spin 0.8s linear infinite;
+}
+
+.pp-processing h2 {
+  font-size: 20px;
+  margin-bottom: 4px;
+  color: #111;
+}
+
+.pp-status-text {
+  color: #888;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.pp-progress-text {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #e53935;
+  font-weight: 600;
+}
+
+/* ── Result ──────────────────────────────────────────────────────── */
+
+.pp-result {
+  text-align: center;
+  padding: 40px 0;
+}
+
+.pp-result-icon {
+  display: inline-block;
+  width: 56px;
+  height: 56px;
+  line-height: 56px;
+  border-radius: 50%;
+  background: #e8f5e9;
+  color: #43a047;
+  font-size: 28px;
+  margin-bottom: 16px;
+}
+
+.pp-result h2 {
+  margin-bottom: 20px;
+  color: #111;
+}
+
+.pp-result-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.pp-link-label {
+  font-size: 13px;
+  color: #888;
+  margin-top: 20px;
+  margin-bottom: 6px;
+}
+
+.pp-link-box {
+  display: flex;
+  gap: 8px;
+}
+
+.pp-link-box input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #e53935;
+  border-radius: 6px;
+  background: #fff;
+  color: #111;
+  font-size: 13px;
+  outline: none;
+  font-family: inherit;
+}
+
+.pp-link-box button {
+  padding: 10px 16px;
+  border: 1px solid #e53935;
+  border-radius: 6px;
+  background: #fff;
+  color: #e53935;
+  cursor: pointer;
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.pp-link-box button:hover {
+  background: #e53935;
+  color: #fff;
+}
+
+/* ── Share password (inside pp) ──────────────────────────────────── */
+
+.pp .share-password-setter {
+  margin-top: 16px;
+}
+
+.pp .share-pw-label {
+  color: #555;
+}
+
+.pp .link-box input {
+  background: #fff;
+  border-color: #e53935;
+  color: #111;
+}
+
+.pp .link-box button {
+  background: #fff;
+  border-color: #e53935;
+  color: #e53935;
+}
+
+.pp .link-box button:hover {
+  background: #e53935;
+  color: #fff;
+}
+
+/* ── Empty state ─────────────────────────────────────────────────── */
+
+.pp-empty {
+  color: #aaa;
+  font-size: 14px;
+  text-align: center;
+  padding: 20px 0;
+}
+
+/* ── Job cards (right column) ────────────────────────────────────── */
+
+.pp-job-card {
+  padding: 12px;
+  border: 1px solid #e53935;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  background: #fff;
+}
+
+.pp-job-card:last-child {
+  margin-bottom: 0;
+}
+
+.pp-job-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  margin-bottom: 8px;
+}
+
+.pp-job-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.pp-job-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pp-job-version {
+  padding: 1px 6px;
+  background: #fff5f5;
+  border: 1px solid #e53935;
+  border-radius: 3px;
+  color: #c62828;
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.pp-job-review {
+  padding: 1px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.pp-job-client {
+  font-size: 12px;
+  color: #888;
+}
+
+.pp-job-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.pp-job-link {
+  padding: 5px 10px;
+  border: 1px solid #e53935;
+  border-radius: 5px;
+  background: #fff;
+  color: #e53935;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pp-job-link:hover {
+  background: #e53935;
+  color: #fff;
+}
+
+.pp-job-watch {
+  border-color: #1976d2;
+  color: #1976d2;
+}
+
+.pp-job-watch:hover {
+  background: #1976d2;
+  color: #fff;
+}
+
+.pp-job-share {
+  border-color: #43a047;
+  color: #43a047;
+}
+
+.pp-job-share:hover {
+  background: #43a047;
+  color: #fff;
+}
+
+.pp-job-download {
+  border-color: #e53935;
+  color: #e53935;
+}
+
+.pp-job-download:hover {
+  background: #e53935;
+  color: #fff;
+}
+
+.pp-job-badge {
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.pp-badge-processing {
+  background: #fff5f5;
+  color: #e53935;
+  border: 1px solid #e53935;
+}
+
+.pp-badge-pending {
+  background: #f5f5f5;
+  color: #888;
+  border: 1px solid #ddd;
+}
+
+.pp-badge-error {
+  background: #fff5f5;
+  color: #c62828;
+  border: 1px solid #c62828;
+}
+
 /* ── Responsive ──────────────────────────────────────────────────── */
 
+@media (max-width: 1024px) {
+  .pp-body {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .pp-left {
+    grid-column: 1;
+  }
+
+  .pp-center {
+    grid-column: 2;
+  }
+
+  .pp-right {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (max-width: 768px) {
+  .pp-body {
+    grid-template-columns: 1fr;
+  }
+
+  .pp-left,
+  .pp-center,
+  .pp-right {
+    grid-column: 1;
+  }
+
   .review-body {
     flex-direction: column;
   }

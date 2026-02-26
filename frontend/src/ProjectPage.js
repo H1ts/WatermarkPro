@@ -80,6 +80,7 @@ function ProjectPage() {
   const [downloadUrl, setDownloadUrl] = useState(null);
   const [error, setError] = useState(null);
   const [dragOver, setDragOver] = useState(false);
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState(null);
   const pollRef = useRef(null);
   const previewRef = useRef(null);
   const draggingRef = useRef(false);
@@ -115,7 +116,9 @@ function ProjectPage() {
   }, [projectLoading, jobId]);
 
   const resetForm = () => {
+    if (videoPreviewUrl) URL.revokeObjectURL(videoPreviewUrl);
     setFile(null);
+    setVideoPreviewUrl(null);
     setFileId(null);
     setJobId(null);
     setJobStatus(null);
@@ -209,6 +212,7 @@ function ProjectPage() {
     if (dropped && dropped.type.startsWith('video/')) {
       resetForm();
       setFile(dropped);
+      setVideoPreviewUrl(URL.createObjectURL(dropped));
     } else {
       setError('Перетащите видеофайл');
     }
@@ -219,6 +223,7 @@ function ProjectPage() {
     if (selected) {
       resetForm();
       setFile(selected);
+      setVideoPreviewUrl(URL.createObjectURL(selected));
     }
   };
 
@@ -330,81 +335,115 @@ function ProjectPage() {
 
   if (projectLoading) {
     return (
-      <div className="app">
-        <header className="header">
-          <h1 className="logo">WatermarkPro</h1>
+      <div className="pp">
+        <header className="pp-header">
+          <h1 className="pp-title">WatermarkPro</h1>
         </header>
-        <main className="main">
-          <div className="dashboard-empty"><div className="spinner" /></div>
-        </main>
+        <div style={{ textAlign: 'center', padding: '80px 0' }}>
+          <div className="pp-spinner" />
+        </div>
       </div>
     );
   }
 
   if (!project) {
     return (
-      <div className="app">
-        <header className="header">
-          <h1 className="logo">WatermarkPro</h1>
+      <div className="pp">
+        <header className="pp-header">
+          <h1 className="pp-title">WatermarkPro</h1>
         </header>
-        <main className="main">
-          <div className="dashboard-empty">
-            <p>Проект не найден</p>
-            <button className="btn-new" onClick={() => navigate('/')}>На главную</button>
-          </div>
-        </main>
+        <div style={{ textAlign: 'center', padding: '80px 0' }}>
+          <p style={{ color: '#888', marginBottom: 16 }}>Проект не найден</p>
+          <button className="pp-btn-outline" onClick={() => navigate('/')}>На главную</button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="app">
-      <header className="header">
-        <div className="header-nav">
-          <button className="btn-back" onClick={() => navigate('/')}>
-            &#8592; Проекты
-          </button>
-        </div>
-        <h1 className="logo">{project.name}</h1>
+    <div className="pp">
+      {/* Header */}
+      <header className="pp-header">
+        <button className="pp-back" onClick={() => navigate('/')}>
+          &#8592; Проекты
+        </button>
+        <h1 className="pp-title">{project.name}</h1>
       </header>
 
-      <main className="main">
-        {/* Upload form — show when no active job */}
-        {!jobId && (
-          <>
-            <div
-              className={`dropzone ${dragOver ? 'dropzone--active' : ''} ${file ? 'dropzone--has-file' : ''}`}
-              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={handleDrop}
-              onClick={() => document.getElementById('file-input').click()}
-            >
-              <input
-                id="file-input"
-                type="file"
-                accept="video/*"
-                onChange={handleFileSelect}
-                hidden
-              />
-              {file ? (
-                <div className="file-info">
-                  <span className="file-icon">&#127916;</span>
-                  <span className="file-name">{file.name}</span>
-                  <span className="file-size">{formatSize(file.size)}</span>
-                </div>
-              ) : (
-                <div className="drop-hint">
-                  <span className="drop-icon">&#8683;</span>
-                  <p>Перетащите видео сюда</p>
-                  <p className="drop-sub">или нажмите для выбора</p>
-                </div>
-              )}
-            </div>
+      {/* Error toast */}
+      {error && (
+        <div className="pp-error">
+          <p>{error}</p>
+          <button onClick={() => setError(null)}>&#10005;</button>
+        </div>
+      )}
 
-            <div className="form-group">
-              <label htmlFor="client-name">Имя клиента (текст watermark)</label>
+      {/* 3-column body */}
+      <div className="pp-body">
+        {/* ── LEFT: Watermark settings ────────────────────────────── */}
+        <aside className="pp-left">
+          <div className="pp-panel">
+            <h3 className="pp-panel-title">Настройки ватермарк</h3>
+
+            {/* Preview 16:9 */}
+            <div
+              className="pp-wm-preview"
+              ref={previewRef}
+              onMouseDown={onPreviewMouseDown}
+              onMouseMove={onPreviewMouseMove}
+              onMouseUp={onPreviewMouseUp}
+              onTouchStart={onPreviewMouseDown}
+              onTouchMove={onPreviewMouseMove}
+              onTouchEnd={onPreviewMouseUp}
+            >
+              <span
+                className="pp-wm-tc"
+                style={{
+                  fontSize: `${Math.max(10, Math.round(36 * previewWidth / 1920 * 1.5))}px`,
+                  opacity: Math.max(0.35, Math.min((1 - wmOpacity / 100) + 0.4, 1)),
+                }}
+              >
+                00:00:00:00
+              </span>
+              <div
+                className="pp-wm-marker"
+                style={{
+                  left: `${wmX}%`,
+                  top: `${wmY}%`,
+                  gap: `${Math.max(4, Math.round(Math.max(10, wmFontSize / 4) * previewWidth / 1920 * 1.5))}px`,
+                }}
+              >
+                <span
+                  className="pp-wm-text"
+                  style={{
+                    fontSize: `${Math.max(10, Math.round(wmFontSize * previewWidth / 1920 * 1.5))}px`,
+                    opacity: Math.max(0.3, 1 - wmOpacity / 100),
+                  }}
+                >
+                  {clientName.trim() || 'ФИО'}
+                </span>
+                {logoFile && logoPreviewUrl && (
+                  <img
+                    src={logoPreviewUrl}
+                    alt=""
+                    className="pp-wm-logo"
+                    style={{
+                      width: `${Math.max(30, Math.round(previewWidth * logoScale / 100))}px`,
+                      opacity: Math.max(0.3, 1 - wmOpacity / 100),
+                    }}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Watermark controls */}
+          <div className="pp-panel">
+            <h3 className="pp-panel-title">Меню настроек ватермарк</h3>
+
+            <div className="pp-field">
+              <label>Имя клиента</label>
               <input
-                id="client-name"
                 type="text"
                 placeholder="Иванов Иван Иванович"
                 value={clientName}
@@ -412,161 +451,64 @@ function ProjectPage() {
               />
             </div>
 
-            <div className="wm-settings">
-              <h3 className="wm-settings-title">Настройки watermark</h3>
-
-              <div className="wm-row">
-                <label>Позиция (перетащите метку)</label>
-                <div
-                  className="wm-preview"
-                  ref={previewRef}
-                  onMouseDown={onPreviewMouseDown}
-                  onMouseMove={onPreviewMouseMove}
-                  onMouseUp={onPreviewMouseUp}
-                  onTouchStart={onPreviewMouseDown}
-                  onTouchMove={onPreviewMouseMove}
-                  onTouchEnd={onPreviewMouseUp}
-                >
-                  <span
-                    className="wm-preview-timecode"
-                    style={{
-                      fontSize: `${Math.max(10, Math.round(36 * previewWidth / 1920 * 1.5))}px`,
-                      opacity: Math.max(0.35, Math.min((1 - wmOpacity / 100) + 0.4, 1)),
-                    }}
-                  >
-                    00:00:00:00
-                  </span>
-                  <div
-                    className="wm-preview-marker"
-                    style={{
-                      left: `${wmX}%`,
-                      top: `${wmY}%`,
-                      gap: `${Math.max(4, Math.round(Math.max(10, wmFontSize / 4) * previewWidth / 1920 * 1.5))}px`,
-                    }}
-                  >
-                    <span
-                      className="wm-preview-text"
-                      style={{
-                        fontSize: `${Math.max(10, Math.round(wmFontSize * previewWidth / 1920 * 1.5))}px`,
-                        opacity: Math.max(0.3, 1 - wmOpacity / 100),
-                      }}
-                    >
-                      {clientName.trim() || 'ФИО'}
-                    </span>
-                    {logoFile && logoPreviewUrl && (
-                      <img
-                        src={logoPreviewUrl}
-                        alt=""
-                        className="wm-preview-logo"
-                        style={{
-                          width: `${Math.max(30, Math.round(previewWidth * logoScale / 100))}px`,
-                          opacity: Math.max(0.3, 1 - wmOpacity / 100),
-                        }}
-                      />
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="wm-row">
-                <label>Прозрачность: {wmOpacity}%</label>
-                <input
-                  type="range" min="20" max="80"
-                  value={wmOpacity}
-                  onChange={(e) => setWmOpacity(Number(e.target.value))}
-                  className="wm-slider"
-                />
-                <div className="wm-range-labels"><span>20%</span><span>80%</span></div>
-              </div>
-
-              <div className="wm-row">
-                <label>Размер шрифта: {wmFontSize}px</label>
-                <input
-                  type="range" min="16" max="120"
-                  value={wmFontSize}
-                  onChange={(e) => setWmFontSize(Number(e.target.value))}
-                  className="wm-slider"
-                />
-                <div className="wm-range-labels"><span>16px</span><span>120px</span></div>
-              </div>
-
-              <div className="wm-row">
-                <label>Лого (PNG, JPG, WebP, до 5 МБ)</label>
-                {logoFile ? (
-                  <div className="logo-preview">
-                    <img src={logoPreviewUrl} alt="Logo preview" className="logo-thumb" />
-                    <span className="logo-name">{logoFile.name}</span>
-                    <button type="button" className="logo-remove" onClick={removeLogo}>&#10005;</button>
-                  </div>
-                ) : (
-                  <button
-                    type="button" className="logo-upload-btn"
-                    onClick={() => document.getElementById('logo-input').click()}
-                    disabled={logoUploading}
-                  >
-                    {logoUploading ? 'Загрузка...' : 'Выбрать лого'}
-                  </button>
-                )}
-                <input id="logo-input" type="file" accept="image/png,image/jpeg,image/webp" onChange={handleLogoSelect} hidden />
-              </div>
-
-              {logoFile && (
-                <div className="wm-row">
-                  <label>Масштаб лого: {logoScale}%</label>
-                  <input
-                    type="range" min="10" max="50"
-                    value={logoScale}
-                    onChange={(e) => setLogoScale(Number(e.target.value))}
-                    className="wm-slider"
-                  />
-                  <div className="wm-range-labels"><span>10%</span><span>50%</span></div>
-                </div>
-              )}
-
-              <div className="wm-row">
-                <label>Качество</label>
-                <div className="option-group">
-                  {[
-                    { value: 'low', label: 'Низкое' },
-                    { value: 'medium', label: 'Среднее' },
-                    { value: 'high', label: 'Лучшее' },
-                  ].map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      className={`option-btn ${quality === opt.value ? 'option-btn--active' : ''}`}
-                      onClick={() => setQuality(opt.value)}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="wm-row">
-                <label>Формат</label>
-                <div className="option-group">
-                  {[
-                    { value: 'mp4', label: 'MP4' },
-                    { value: 'mov', label: 'MOV' },
-                  ].map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      className={`option-btn ${codec === opt.value ? 'option-btn--active' : ''}`}
-                      onClick={() => setCodec(opt.value)}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+            <div className="pp-field">
+              <label>Прозрачность: {wmOpacity}%</label>
+              <input
+                type="range" min="20" max="80"
+                value={wmOpacity}
+                onChange={(e) => setWmOpacity(Number(e.target.value))}
+                className="pp-slider"
+              />
+              <div className="pp-range-labels"><span>20%</span><span>80%</span></div>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="notify-email">Email для уведомлений (необязательно)</label>
+            <div className="pp-field">
+              <label>Размер шрифта: {wmFontSize}px</label>
               <input
-                id="notify-email"
+                type="range" min="16" max="120"
+                value={wmFontSize}
+                onChange={(e) => setWmFontSize(Number(e.target.value))}
+                className="pp-slider"
+              />
+              <div className="pp-range-labels"><span>16px</span><span>120px</span></div>
+            </div>
+
+            <div className="pp-field">
+              <label>Лого (PNG, JPG, WebP, до 5 МБ)</label>
+              {logoFile ? (
+                <div className="pp-logo-row">
+                  <img src={logoPreviewUrl} alt="" className="pp-logo-thumb" />
+                  <span className="pp-logo-name">{logoFile.name}</span>
+                  <button type="button" className="pp-logo-remove" onClick={removeLogo}>&#10005;</button>
+                </div>
+              ) : (
+                <button
+                  type="button" className="pp-btn-outline"
+                  onClick={() => document.getElementById('logo-input').click()}
+                  disabled={logoUploading}
+                >
+                  {logoUploading ? 'Загрузка...' : 'Выбрать лого'}
+                </button>
+              )}
+              <input id="logo-input" type="file" accept="image/png,image/jpeg,image/webp" onChange={handleLogoSelect} hidden />
+            </div>
+
+            {logoFile && (
+              <div className="pp-field">
+                <label>Масштаб лого: {logoScale}%</label>
+                <input
+                  type="range" min="10" max="50"
+                  value={logoScale}
+                  onChange={(e) => setLogoScale(Number(e.target.value))}
+                  className="pp-slider"
+                />
+                <div className="pp-range-labels"><span>10%</span><span>50%</span></div>
+              </div>
+            )}
+
+            <div className="pp-field">
+              <label>Email для уведомлений</label>
+              <input
                 type="email"
                 placeholder="you@example.com"
                 value={notifyEmail}
@@ -576,97 +518,183 @@ function ProjectPage() {
                 }}
               />
             </div>
+          </div>
+        </aside>
 
-            <button
-              className="btn-process"
-              onClick={upload}
-              disabled={!file || !clientName.trim() || uploading}
-            >
-              {uploading ? `Загрузка... ${uploadProgress}%` : 'Загрузить и обработать'}
-            </button>
-
-            {uploading && (
-              <div className="progress-bar">
-                <div className="progress-fill" style={{ width: `${uploadProgress}%` }} />
+        {/* ── CENTER: Dropzone + Quality/Format ───────────────────── */}
+        <section className="pp-center">
+          {!jobId && (
+            <>
+              <div
+                className={`pp-dropzone ${dragOver ? 'pp-dropzone--active' : ''} ${file ? 'pp-dropzone--has-file' : ''}`}
+                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={handleDrop}
+                onClick={() => { if (!file) document.getElementById('file-input').click(); }}
+              >
+                <input
+                  id="file-input"
+                  type="file"
+                  accept="video/*"
+                  onChange={handleFileSelect}
+                  hidden
+                />
+                {file && videoPreviewUrl ? (
+                  <div className="pp-video-preview">
+                    <video
+                      src={videoPreviewUrl}
+                      controls
+                      className="pp-video-player"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <div className="pp-file-bar">
+                      <span className="pp-file-name">{file.name}</span>
+                      <span className="pp-file-size">{formatSize(file.size)}</span>
+                      <button
+                        type="button"
+                        className="pp-file-change"
+                        onClick={(e) => { e.stopPropagation(); document.getElementById('file-input').click(); }}
+                      >
+                        Заменить
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="pp-drop-hint">
+                    <span className="pp-drop-icon">&#8683;</span>
+                    <p>Перетащите видео сюда</p>
+                    <p className="pp-drop-sub">или нажмите для выбора</p>
+                  </div>
+                )}
               </div>
-            )}
-          </>
-        )}
 
-        {/* Processing */}
-        {isProcessing && (
-          <div className="processing">
-            <div className="spinner" />
-            <h2>Обработка видео...</h2>
-            <p className="status-text">{jobStatus === 'pending' ? 'В очереди' : 'Кодирование'}</p>
-            <div className="progress-bar">
-              <div className="progress-fill progress-fill--render" style={{ width: `${jobProgress}%` }} />
-            </div>
-            <p className="progress-text">{jobProgress}%</p>
-          </div>
-        )}
+              {/* Quality & Format */}
+              <div className="pp-panel">
+                <h3 className="pp-panel-title">Качество и формат</h3>
+                <div className="pp-field">
+                  <label>Качество</label>
+                  <div className="pp-options">
+                    {[
+                      { value: 'low', label: 'Низкое' },
+                      { value: 'medium', label: 'Среднее' },
+                      { value: 'high', label: 'Лучшее' },
+                    ].map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        className={`pp-opt-btn ${quality === opt.value ? 'pp-opt-btn--active' : ''}`}
+                        onClick={() => setQuality(opt.value)}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-        {/* Result */}
-        {jobStatus === 'done' && watchUrl && (
-          <div className="result">
-            <span className="result-icon">&#10003;</span>
-            <h2>Готово!</h2>
-            <div className="result-actions">
-              <a href={`/review/${jobId}`} className="btn-watch">
-                Рецензировать
-              </a>
-              {downloadUrl && (
-                <a href={downloadUrl} download className="btn-download">
-                  Скачать {codec.toUpperCase()}
-                </a>
+                <div className="pp-field">
+                  <label>Формат</label>
+                  <div className="pp-options">
+                    {[
+                      { value: 'mp4', label: 'MP4' },
+                      { value: 'mov', label: 'MOV' },
+                    ].map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        className={`pp-opt-btn ${codec === opt.value ? 'pp-opt-btn--active' : ''}`}
+                        onClick={() => setCodec(opt.value)}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <button
+                className="pp-btn-process"
+                onClick={upload}
+                disabled={!file || !clientName.trim() || uploading}
+              >
+                {uploading ? `Загрузка... ${uploadProgress}%` : 'Загрузить и обработать'}
+              </button>
+
+              {uploading && (
+                <div className="pp-progress">
+                  <div className="pp-progress-fill" style={{ width: `${uploadProgress}%` }} />
+                </div>
               )}
-            </div>
-            <p className="link-label">Ссылка для клиента:</p>
-            <div className="link-box">
-              <input readOnly value={shareUrl || watchUrl} onClick={(e) => e.target.select()} />
-              <button onClick={() => navigator.clipboard.writeText(shareUrl || watchUrl)}>Копировать</button>
-            </div>
-            <SharePasswordSetter jobId={jobId} />
-            <button className="btn-new" onClick={resetForm}>Загрузить ещё</button>
-          </div>
-        )}
+            </>
+          )}
 
-        {/* Error */}
-        {error && (
-          <div className="error">
-            <p>{error}</p>
-            <button onClick={() => setError(null)}>Закрыть</button>
-          </div>
-        )}
+          {/* Processing */}
+          {isProcessing && (
+            <div className="pp-processing">
+              <div className="pp-spinner" />
+              <h2>Обработка видео...</h2>
+              <p className="pp-status-text">{jobStatus === 'pending' ? 'В очереди' : 'Кодирование'}</p>
+              <div className="pp-progress">
+                <div className="pp-progress-fill pp-progress-fill--render" style={{ width: `${jobProgress}%` }} />
+              </div>
+              <p className="pp-progress-text">{jobProgress}%</p>
+            </div>
+          )}
 
-        {/* Job history */}
-        {project.jobs && project.jobs.length > 0 && !isProcessing && (
-          <div className="job-history">
-            <h3 className="job-history-title">Файлы проекта</h3>
-            {project.jobs.map((job) => (
-              <div key={job.id} className="job-card">
-                <div className="job-card-info">
-                  <div className="job-card-name-row">
-                    <span className="job-card-name">{job.filename || 'video'}</span>
-                    {job.version > 1 && <span className="job-card-version">V{job.version}</span>}
+          {/* Result */}
+          {jobStatus === 'done' && watchUrl && (
+            <div className="pp-result">
+              <span className="pp-result-icon">&#10003;</span>
+              <h2>Готово!</h2>
+              <div className="pp-result-actions">
+                <a href={`/review/${jobId}`} className="pp-btn-primary">Рецензировать</a>
+                {downloadUrl && (
+                  <a href={downloadUrl} download className="pp-btn-outline">
+                    Скачать {codec.toUpperCase()}
+                  </a>
+                )}
+              </div>
+              <p className="pp-link-label">Ссылка для клиента:</p>
+              <div className="pp-link-box">
+                <input readOnly value={shareUrl || watchUrl} onClick={(e) => e.target.select()} />
+                <button onClick={() => navigator.clipboard.writeText(shareUrl || watchUrl)}>Копировать</button>
+              </div>
+              <SharePasswordSetter jobId={jobId} />
+              <button className="pp-btn-outline" onClick={resetForm} style={{ marginTop: 12 }}>Загрузить ещё</button>
+            </div>
+          )}
+        </section>
+
+        {/* ── RIGHT: Project files ────────────────────────────────── */}
+        <aside className="pp-right">
+          <div className="pp-panel">
+            <h3 className="pp-panel-title">Файлы проекта</h3>
+
+            {(!project.jobs || project.jobs.length === 0) && (
+              <p className="pp-empty">Пока нет файлов</p>
+            )}
+
+            {project.jobs && project.jobs.map((job) => (
+              <div key={job.id} className="pp-job-card">
+                <div className="pp-job-info">
+                  <div className="pp-job-name-row">
+                    <span className="pp-job-name">{job.filename || 'video'}</span>
+                    {job.version > 1 && <span className="pp-job-version">V{job.version}</span>}
                     {job.status === 'done' && job.review_status && (
-                      <span className={`job-card-review-status review-status--${job.review_status}`}>
+                      <span className={`pp-job-review review-status--${job.review_status}`}>
                         {job.review_status === 'approved' && 'Утверждено'}
                         {job.review_status === 'needs_revision' && 'Правки'}
                         {job.review_status === 'pending_review' && 'На рецензии'}
                       </span>
                     )}
                   </div>
-                  <span className="job-card-client">{job.client_name}</span>
+                  <span className="pp-job-client">{job.client_name}</span>
                 </div>
-                <div className="job-card-actions">
+                <div className="pp-job-actions">
                   {job.status === 'done' && (
                     <>
-                      <a href={`/share/${job.id}`} target="_blank" rel="noopener noreferrer" className="job-card-link job-card-watch">
-                        Смотреть
-                      </a>
+                      <a href={`/share/${job.id}`} target="_blank" rel="noopener noreferrer" className="pp-job-link pp-job-watch">Смотреть</a>
                       <button
-                        className="job-card-link job-card-share"
+                        className="pp-job-link pp-job-share"
                         onClick={(e) => {
                           e.stopPropagation();
                           const url = job.share_url || `${window.location.origin}/share/${job.id}`;
@@ -689,23 +717,19 @@ function ProjectPage() {
                       >
                         Поделиться
                       </button>
-                      <a href={job.download_url} download className="job-card-link job-card-download">
-                        Скачать {(job.codec || 'mp4').toUpperCase()}
-                      </a>
-                      <a href={`/review/${job.id}`} className="job-card-link">
-                        Рецензировать
-                      </a>
+                      <a href={job.download_url} download className="pp-job-link pp-job-download">Скачать {(job.codec || 'mp4').toUpperCase()}</a>
+                      <a href={`/review/${job.id}`} className="pp-job-link">Рецензировать</a>
                     </>
                   )}
-                  {job.status === 'processing' && <span className="job-card-badge badge-processing">Обработка</span>}
-                  {job.status === 'pending' && <span className="job-card-badge badge-pending">В очереди</span>}
-                  {job.status === 'error' && <span className="job-card-badge badge-error">Ошибка</span>}
+                  {job.status === 'processing' && <span className="pp-job-badge pp-badge-processing">Обработка</span>}
+                  {job.status === 'pending' && <span className="pp-job-badge pp-badge-pending">В очереди</span>}
+                  {job.status === 'error' && <span className="pp-job-badge pp-badge-error">Ошибка</span>}
                 </div>
               </div>
             ))}
           </div>
-        )}
-      </main>
+        </aside>
+      </div>
     </div>
   );
 }
