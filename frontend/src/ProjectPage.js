@@ -43,6 +43,7 @@ function ProjectPage() {
   const videoPreviewRef = useRef(null);
   const draggingRef = useRef(false);
   const [previewWidth, setPreviewWidth] = useState(0);
+  const [videoNativeWidth, setVideoNativeWidth] = useState(1920);
   const resultVideoRef = useRef(null);
   const resultHlsRef = useRef(null);
 
@@ -414,14 +415,17 @@ function ProjectPage() {
                         objectFit: 'contain',
                         pointerEvents: 'none',
                       }}
-                      onLoadedData={(e) => { e.target.currentTime = 0.5; }}
+                      onLoadedData={(e) => {
+                        e.target.currentTime = 0.5;
+                        if (e.target.videoWidth > 0) setVideoNativeWidth(e.target.videoWidth);
+                      }}
                     />
 
                     {/* Timecode preview */}
                     <span
                       className="wm-preview-timecode"
                       style={{
-                        fontSize: `${Math.max(10, Math.round(36 * previewWidth / 1920 * 1.5))}px`,
+                        fontSize: `${Math.max(10, Math.round(36 * previewWidth / videoNativeWidth))}px`,
                         opacity: Math.max(0.35, Math.min((1 - wmOpacity / 100) + 0.4, 1)),
                       }}
                     >
@@ -442,7 +446,7 @@ function ProjectPage() {
                           <span
                             className="wm-preview-text"
                             style={{
-                              fontSize: `${Math.max(10, Math.round(wmFontSize * previewWidth / 1920 * 1.5))}px`,
+                              fontSize: `${Math.max(10, Math.round(wmFontSize * previewWidth / videoNativeWidth))}px`,
                               opacity: Math.max(0.3, 1 - wmOpacity / 100),
                             }}
                           >
