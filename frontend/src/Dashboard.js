@@ -111,21 +111,25 @@ function Dashboard() {
                 className="project-card"
                 onClick={() => navigate(`/projects/${p.id}`)}
               >
-                <div className="project-card-icon">&#127916;</div>
-                <div className="project-card-body">
-                  <h3 className="project-card-name">{p.name}</h3>
-                  <div className="project-card-meta">
-                    <span>{formatDate(p.created_at)}</span>
-                    <span>{p.job_count} {p.job_count === 1 ? 'файл' : p.job_count >= 2 && p.job_count <= 4 ? 'файла' : 'файлов'}</span>
-                  </div>
+                <div className="project-card-thumb">
+                  <span className="project-card-thumb-icon">&#127916;</span>
                 </div>
-                <button
-                  className="project-card-delete"
-                  onClick={(e) => deleteProject(e, p.id)}
-                  title="Удалить проект"
-                >
-                  &#10005;
-                </button>
+                <div className="project-card-body">
+                  <div className="project-card-info">
+                    <h3 className="project-card-name">{p.name}</h3>
+                    <div className="project-card-meta">
+                      <span>{formatDate(p.created_at)}</span>
+                      <span>{p.job_count} {p.job_count === 1 ? 'файл' : p.job_count >= 2 && p.job_count <= 4 ? 'файла' : 'файлов'}</span>
+                    </div>
+                  </div>
+                  <button
+                    className="project-card-delete"
+                    onClick={(e) => deleteProject(e, p.id)}
+                    title="Удалить проект"
+                  >
+                    &#10005;
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -134,7 +138,7 @@ function Dashboard() {
         {error && (
           <div className="error">
             <p>{error}</p>
-            <button onClick={() => setError(null)}>Dismiss</button>
+            <button onClick={() => setError(null)}>Закрыть</button>
           </div>
         )}
       </main>
@@ -147,6 +151,7 @@ function Dashboard() {
               <label htmlFor="project-name">Название проекта</label>
               <input
                 id="project-name"
+                className="form-input"
                 type="text"
                 placeholder="Мой проект"
                 value={newName}
@@ -163,7 +168,7 @@ function Dashboard() {
                 Отмена
               </button>
               <button
-                className="btn-process"
+                className="btn-primary"
                 onClick={createProject}
                 disabled={!newName.trim() || creating}
                 style={{ width: 'auto', marginTop: 0, padding: '10px 24px' }}
