@@ -36,8 +36,10 @@ function ProjectPage() {
   const [downloadUrl, setDownloadUrl] = useState(null);
   const [error, setError] = useState(null);
   const [dragOver, setDragOver] = useState(false);
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState(null);
   const pollRef = useRef(null);
   const previewRef = useRef(null);
+  const videoPreviewRef = useRef(null);
   const draggingRef = useRef(false);
   const [previewWidth, setPreviewWidth] = useState(0);
 
@@ -58,6 +60,17 @@ function ProjectPage() {
   useEffect(() => {
     fetchProject();
   }, [fetchProject]);
+
+  // Create video preview blob URL when file changes
+  useEffect(() => {
+    if (!file) {
+      setVideoPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setVideoPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
 
   // Track preview container width
   useEffect(() => {
@@ -362,9 +375,28 @@ function ProjectPage() {
                   </div>
                 )}
 
-                {/* File loaded — watermark preview */}
-                {file && (
+                {/* File loaded — video preview + watermark overlay */}
+                {file && videoPreviewUrl && (
                   <>
+                    {/* Actual video first frame as background */}
+                    <video
+                      ref={videoPreviewRef}
+                      src={videoPreviewUrl}
+                      muted
+                      preload="metadata"
+                      playsInline
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'contain',
+                        pointerEvents: 'none',
+                      }}
+                      onLoadedData={(e) => { e.target.currentTime = 0.5; }}
+                    />
+
                     {/* Timecode preview */}
                     <span
                       className="wm-preview-timecode"
