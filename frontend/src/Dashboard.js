@@ -163,9 +163,10 @@ function Dashboard() {
                 Отмена
               </button>
               <button
-                className="btn-modal-submit"
+                className="btn-process"
                 onClick={createProject}
                 disabled={!newName.trim() || creating}
+                style={{ width: 'auto', marginTop: 0, padding: '10px 24px' }}
               >
                 {creating ? 'Создание...' : 'Создать'}
               </button>
