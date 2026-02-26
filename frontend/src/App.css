@@ -1836,7 +1836,7 @@ body {
 }
 
 /* ══════════════════════════════════════════════════════════════════════
-   ProjectPage — 3-column layout (white theme, red borders)
+   Shared PP base (white theme, red accents) — Dashboard + ProjectPage
    ══════════════════════════════════════════════════════════════════════ */
 
 .pp {
@@ -1904,41 +1904,245 @@ body {
   font-size: 16px;
 }
 
-/* ── 3-column body ──────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════════════
+   Dashboard — white + red design
+   ══════════════════════════════════════════════════════════════════════ */
 
-.pp-body {
+.dash-subtitle {
+  font-size: 14px;
+  color: #999;
+  margin-left: auto;
+}
+
+.dash-content {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.dash-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.dash-heading {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111;
+}
+
+.dash-create-btn {
+  width: auto;
+  padding: 10px 24px;
+  font-size: 14px;
+}
+
+.dash-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: #888;
+}
+
+.dash-empty-icon {
+  font-size: 48px;
+  display: block;
+  margin-bottom: 12px;
+}
+
+.dash-empty-sub {
+  font-size: 13px;
+  color: #aaa;
+  margin-top: 4px;
+}
+
+/* ── Project grid (Dashboard) ─────────────────────────────────── */
+
+.dash-grid {
   display: grid;
-  grid-template-columns: 280px 1fr 300px;
-  gap: 20px;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.dash-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  background: #fff;
+  border: 2px solid #e53935;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.dash-card:hover {
+  background: #fff5f5;
+  box-shadow: 0 2px 12px rgba(229, 57, 53, 0.1);
+}
+
+.dash-card-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff5f5;
+  border: 1px solid #e53935;
+  border-radius: 10px;
+}
+
+.dash-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.dash-card-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dash-card-meta {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #888;
+}
+
+.dash-card-delete {
+  background: none;
+  border: none;
+  color: #ccc;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.dash-card-delete:hover {
+  color: #e53935;
+  background: #fff5f5;
+}
+
+/* ── Modal (Dashboard) ─────────────────────────────────────────── */
+
+.dash-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+}
+
+.dash-modal {
+  background: #fff;
+  border: 2px solid #e53935;
+  border-radius: 12px;
+  padding: 24px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+.dash-modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111;
+  margin-bottom: 16px;
+}
+
+.dash-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   ProjectPage — YouTube-like 2-column layout
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── YouTube 2-column body ────────────────────────────────────── */
+
+.pp-body-yt {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 24px;
   padding: 20px 24px;
   flex: 1;
   min-height: 0;
   align-items: start;
 }
 
-/* ── Left column ────────────────────────────────────────────────── */
+/* ── Main (left, large) ──────────────────────────────────────── */
 
-.pp-left {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-/* ── Center column ──────────────────────────────────────────────── */
-
-.pp-center {
+.pp-main {
   display: flex;
   flex-direction: column;
   gap: 16px;
   min-width: 0;
 }
 
-/* ── Right column ───────────────────────────────────────────────── */
+/* ── Sidebar (right, files) ──────────────────────────────────── */
 
-.pp-right {
+.pp-sidebar {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+/* ── Dropzone YouTube (taller, 16:9 aspect) ──────────────────── */
+
+.pp-dropzone-yt {
+  min-height: 360px;
+}
+
+.pp-dropzone-yt .pp-video-player {
+  max-height: 520px;
+}
+
+/* ── Watermark section (below video) ─────────────────────────── */
+
+.pp-wm-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Watermark 2-col grid: preview left, controls right */
+.pp-wm-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.pp-wm-grid-preview {
+  min-width: 0;
+}
+
+.pp-wm-grid-controls {
+  min-width: 0;
+}
+
+/* Quality + Format row */
+.pp-qf-row {
+  display: flex;
+  gap: 20px;
 }
 
 /* ── Panel (shared box) ─────────────────────────────────────────── */
@@ -2655,32 +2859,40 @@ body {
 /* ── Responsive ──────────────────────────────────────────────────── */
 
 @media (max-width: 1024px) {
-  .pp-body {
+  .pp-body-yt {
+    grid-template-columns: 1fr;
+  }
+
+  .pp-sidebar {
+    order: 2;
+  }
+
+  .pp-wm-grid {
     grid-template-columns: 1fr 1fr;
   }
 
-  .pp-left {
-    grid-column: 1;
-  }
-
-  .pp-center {
-    grid-column: 2;
-  }
-
-  .pp-right {
-    grid-column: 1 / -1;
+  .pp-qf-row {
+    flex-wrap: wrap;
   }
 }
 
 @media (max-width: 768px) {
-  .pp-body {
+  .pp-body-yt {
+    grid-template-columns: 1fr;
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .pp-wm-grid {
     grid-template-columns: 1fr;
   }
 
-  .pp-left,
-  .pp-center,
-  .pp-right {
-    grid-column: 1;
+  .pp-qf-row {
+    flex-direction: column;
+  }
+
+  .dash-content {
+    padding: 16px;
   }
 
   .review-body {

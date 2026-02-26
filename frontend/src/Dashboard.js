@@ -75,52 +75,52 @@ function Dashboard() {
   };
 
   return (
-    <div className="app">
-      <header className="header">
-        <h1 className="logo">WatermarkPro</h1>
-        <p className="subtitle">Video watermark & secure streaming</p>
+    <div className="pp">
+      <header className="pp-header">
+        <h1 className="pp-title">WatermarkPro</h1>
+        <span className="dash-subtitle">Video watermark & secure streaming</span>
       </header>
 
-      <main className="dashboard">
-        <div className="dashboard-top">
-          <h2 className="dashboard-title">Проекты</h2>
-          <button className="btn-create" onClick={() => setShowModal(true)}>
+      <main className="dash-content">
+        <div className="dash-top">
+          <h2 className="dash-heading">Проекты</h2>
+          <button className="pp-btn-process dash-create-btn" onClick={() => setShowModal(true)}>
             + Новый проект
           </button>
         </div>
 
         {loading && (
-          <div className="dashboard-empty">
-            <div className="spinner" />
+          <div className="dash-empty">
+            <div className="pp-spinner" />
           </div>
         )}
 
         {!loading && projects.length === 0 && (
-          <div className="dashboard-empty">
-            <span className="empty-icon">&#128193;</span>
+          <div className="dash-empty">
+            <span className="dash-empty-icon">&#128193;</span>
             <p>Нет проектов</p>
-            <p className="empty-sub">Создайте первый проект, чтобы начать работу</p>
+            <p className="dash-empty-sub">Создайте первый проект, чтобы начать работу</p>
           </div>
         )}
 
         {!loading && projects.length > 0 && (
-          <div className="project-grid">
+          <div className="dash-grid">
             {projects.map((p) => (
               <div
                 key={p.id}
-                className="project-card"
+                className="dash-card"
                 onClick={() => navigate(`/projects/${p.id}`)}
               >
-                <div className="project-card-icon">&#127916;</div>
-                <div className="project-card-body">
-                  <h3 className="project-card-name">{p.name}</h3>
-                  <div className="project-card-meta">
+                <div className="dash-card-icon">&#127916;</div>
+                <div className="dash-card-body">
+                  <h3 className="dash-card-name">{p.name}</h3>
+                  <div className="dash-card-meta">
                     <span>{formatDate(p.created_at)}</span>
                     <span>{p.job_count} {p.job_count === 1 ? 'файл' : 'файлов'}</span>
                   </div>
                 </div>
                 <button
-                  className="project-card-delete"
+                  className="dash-card-delete"
                   onClick={(e) => deleteProject(e, p.id)}
                   title="Удалить проект"
                 >
@@ -132,18 +132,18 @@ function Dashboard() {
         )}
 
         {error && (
-          <div className="error">
+          <div className="pp-error">
             <p>{error}</p>
-            <button onClick={() => setError(null)}>Dismiss</button>
+            <button onClick={() => setError(null)}>&#10005;</button>
           </div>
         )}
       </main>
 
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3 className="modal-title">Новый проект</h3>
-            <div className="form-group">
+        <div className="dash-modal-overlay" onClick={() => setShowModal(false)}>
+          <div className="dash-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="dash-modal-title">Новый проект</h3>
+            <div className="pp-field">
               <label htmlFor="project-name">Название проекта</label>
               <input
                 id="project-name"
@@ -155,18 +155,18 @@ function Dashboard() {
                 autoFocus
               />
             </div>
-            <div className="modal-actions">
+            <div className="dash-modal-actions">
               <button
-                className="btn-cancel"
+                className="pp-btn-outline"
                 onClick={() => { setShowModal(false); setNewName(''); }}
               >
                 Отмена
               </button>
               <button
-                className="btn-process"
+                className="pp-btn-process"
                 onClick={createProject}
                 disabled={!newName.trim() || creating}
-                style={{ width: 'auto', marginTop: 0, padding: '10px 24px' }}
+                style={{ width: 'auto', padding: '10px 24px' }}
               >
                 {creating ? 'Создание...' : 'Создать'}
               </button>

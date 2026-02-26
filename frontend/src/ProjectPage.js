@@ -104,7 +104,7 @@ function ProjectPage() {
     fetchProject();
   }, [fetchProject]);
 
-  // Track preview container width — re-run when form becomes visible
+  // Track preview container width
   useEffect(() => {
     const el = previewRef.current;
     if (!el) return;
@@ -317,7 +317,7 @@ function ProjectPage() {
           setShareUrl(data.share_url);
           setDownloadUrl(data.download_url);
           clearInterval(pollRef.current);
-          fetchProject(); // refresh job list
+          fetchProject();
         }
         if (data.status === 'error') {
           setError(data.error || 'Processing failed');
@@ -378,155 +378,15 @@ function ProjectPage() {
         </div>
       )}
 
-      {/* 3-column body */}
-      <div className="pp-body">
-        {/* ── LEFT: Watermark settings ────────────────────────────── */}
-        <aside className="pp-left">
-          <div className="pp-panel">
-            <h3 className="pp-panel-title">Настройки ватермарк</h3>
-
-            {/* Preview 16:9 */}
-            <div
-              className="pp-wm-preview"
-              ref={previewRef}
-              onMouseDown={onPreviewMouseDown}
-              onMouseMove={onPreviewMouseMove}
-              onMouseUp={onPreviewMouseUp}
-              onTouchStart={onPreviewMouseDown}
-              onTouchMove={onPreviewMouseMove}
-              onTouchEnd={onPreviewMouseUp}
-            >
-              <span
-                className="pp-wm-tc"
-                style={{
-                  fontSize: `${Math.max(10, Math.round(36 * previewWidth / 1920 * 1.5))}px`,
-                  opacity: Math.max(0.35, Math.min((1 - wmOpacity / 100) + 0.4, 1)),
-                }}
-              >
-                00:00:00:00
-              </span>
-              <div
-                className="pp-wm-marker"
-                style={{
-                  left: `${wmX}%`,
-                  top: `${wmY}%`,
-                  gap: `${Math.max(4, Math.round(Math.max(10, wmFontSize / 4) * previewWidth / 1920 * 1.5))}px`,
-                }}
-              >
-                <span
-                  className="pp-wm-text"
-                  style={{
-                    fontSize: `${Math.max(10, Math.round(wmFontSize * previewWidth / 1920 * 1.5))}px`,
-                    opacity: Math.max(0.3, 1 - wmOpacity / 100),
-                  }}
-                >
-                  {clientName.trim() || 'ФИО'}
-                </span>
-                {logoFile && logoPreviewUrl && (
-                  <img
-                    src={logoPreviewUrl}
-                    alt=""
-                    className="pp-wm-logo"
-                    style={{
-                      width: `${Math.max(30, Math.round(previewWidth * logoScale / 100))}px`,
-                      opacity: Math.max(0.3, 1 - wmOpacity / 100),
-                    }}
-                  />
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Watermark controls */}
-          <div className="pp-panel">
-            <h3 className="pp-panel-title">Меню настроек ватермарк</h3>
-
-            <div className="pp-field">
-              <label>Имя клиента</label>
-              <input
-                type="text"
-                placeholder="Иванов Иван Иванович"
-                value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
-              />
-            </div>
-
-            <div className="pp-field">
-              <label>Прозрачность: {wmOpacity}%</label>
-              <input
-                type="range" min="20" max="80"
-                value={wmOpacity}
-                onChange={(e) => setWmOpacity(Number(e.target.value))}
-                className="pp-slider"
-              />
-              <div className="pp-range-labels"><span>20%</span><span>80%</span></div>
-            </div>
-
-            <div className="pp-field">
-              <label>Размер шрифта: {wmFontSize}px</label>
-              <input
-                type="range" min="16" max="120"
-                value={wmFontSize}
-                onChange={(e) => setWmFontSize(Number(e.target.value))}
-                className="pp-slider"
-              />
-              <div className="pp-range-labels"><span>16px</span><span>120px</span></div>
-            </div>
-
-            <div className="pp-field">
-              <label>Лого (PNG, JPG, WebP, до 5 МБ)</label>
-              {logoFile ? (
-                <div className="pp-logo-row">
-                  <img src={logoPreviewUrl} alt="" className="pp-logo-thumb" />
-                  <span className="pp-logo-name">{logoFile.name}</span>
-                  <button type="button" className="pp-logo-remove" onClick={removeLogo}>&#10005;</button>
-                </div>
-              ) : (
-                <button
-                  type="button" className="pp-btn-outline"
-                  onClick={() => document.getElementById('logo-input').click()}
-                  disabled={logoUploading}
-                >
-                  {logoUploading ? 'Загрузка...' : 'Выбрать лого'}
-                </button>
-              )}
-              <input id="logo-input" type="file" accept="image/png,image/jpeg,image/webp" onChange={handleLogoSelect} hidden />
-            </div>
-
-            {logoFile && (
-              <div className="pp-field">
-                <label>Масштаб лого: {logoScale}%</label>
-                <input
-                  type="range" min="10" max="50"
-                  value={logoScale}
-                  onChange={(e) => setLogoScale(Number(e.target.value))}
-                  className="pp-slider"
-                />
-                <div className="pp-range-labels"><span>10%</span><span>50%</span></div>
-              </div>
-            )}
-
-            <div className="pp-field">
-              <label>Email для уведомлений</label>
-              <input
-                type="email"
-                placeholder="you@example.com"
-                value={notifyEmail}
-                onChange={(e) => {
-                  setNotifyEmail(e.target.value);
-                  localStorage.setItem('wmpro_notify_email', e.target.value);
-                }}
-              />
-            </div>
-          </div>
-        </aside>
-
-        {/* ── CENTER: Dropzone + Quality/Format ───────────────────── */}
-        <section className="pp-center">
+      {/* YouTube-like 2-column body */}
+      <div className="pp-body-yt">
+        {/* ── MAIN (left, large) ─────────────────────────────────── */}
+        <div className="pp-main">
           {!jobId && (
             <>
+              {/* Dropzone */}
               <div
-                className={`pp-dropzone ${dragOver ? 'pp-dropzone--active' : ''} ${file ? 'pp-dropzone--has-file' : ''}`}
+                className={`pp-dropzone pp-dropzone-yt ${dragOver ? 'pp-dropzone--active' : ''} ${file ? 'pp-dropzone--has-file' : ''}`}
                 onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
                 onDragLeave={() => setDragOver(false)}
                 onDrop={handleDrop}
@@ -568,45 +428,189 @@ function ProjectPage() {
                 )}
               </div>
 
-              {/* Quality & Format */}
-              <div className="pp-panel">
-                <h3 className="pp-panel-title">Качество и формат</h3>
-                <div className="pp-field">
-                  <label>Качество</label>
-                  <div className="pp-options">
-                    {[
-                      { value: 'low', label: 'Низкое' },
-                      { value: 'medium', label: 'Среднее' },
-                      { value: 'high', label: 'Лучшее' },
-                    ].map((opt) => (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        className={`pp-opt-btn ${quality === opt.value ? 'pp-opt-btn--active' : ''}`}
-                        onClick={() => setQuality(opt.value)}
+              {/* Watermark settings (below video, like YouTube description) */}
+              <div className="pp-wm-section">
+                <div className="pp-panel">
+                  <h3 className="pp-panel-title">Настройки ватермарк</h3>
+                  <div className="pp-wm-grid">
+                    {/* Left: Preview 16:9 */}
+                    <div className="pp-wm-grid-preview">
+                      <div
+                        className="pp-wm-preview"
+                        ref={previewRef}
+                        onMouseDown={onPreviewMouseDown}
+                        onMouseMove={onPreviewMouseMove}
+                        onMouseUp={onPreviewMouseUp}
+                        onTouchStart={onPreviewMouseDown}
+                        onTouchMove={onPreviewMouseMove}
+                        onTouchEnd={onPreviewMouseUp}
                       >
-                        {opt.label}
-                      </button>
-                    ))}
+                        <span
+                          className="pp-wm-tc"
+                          style={{
+                            fontSize: `${Math.max(10, Math.round(36 * previewWidth / 1920 * 1.5))}px`,
+                            opacity: Math.max(0.35, Math.min((1 - wmOpacity / 100) + 0.4, 1)),
+                          }}
+                        >
+                          00:00:00:00
+                        </span>
+                        <div
+                          className="pp-wm-marker"
+                          style={{
+                            left: `${wmX}%`,
+                            top: `${wmY}%`,
+                            gap: `${Math.max(4, Math.round(Math.max(10, wmFontSize / 4) * previewWidth / 1920 * 1.5))}px`,
+                          }}
+                        >
+                          <span
+                            className="pp-wm-text"
+                            style={{
+                              fontSize: `${Math.max(10, Math.round(wmFontSize * previewWidth / 1920 * 1.5))}px`,
+                              opacity: Math.max(0.3, 1 - wmOpacity / 100),
+                            }}
+                          >
+                            {clientName.trim() || 'ФИО'}
+                          </span>
+                          {logoFile && logoPreviewUrl && (
+                            <img
+                              src={logoPreviewUrl}
+                              alt=""
+                              className="pp-wm-logo"
+                              style={{
+                                width: `${Math.max(30, Math.round(previewWidth * logoScale / 100))}px`,
+                                opacity: Math.max(0.3, 1 - wmOpacity / 100),
+                              }}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right: Controls */}
+                    <div className="pp-wm-grid-controls">
+                      <div className="pp-field">
+                        <label>Имя клиента</label>
+                        <input
+                          type="text"
+                          placeholder="Иванов Иван Иванович"
+                          value={clientName}
+                          onChange={(e) => setClientName(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="pp-field">
+                        <label>Прозрачность: {wmOpacity}%</label>
+                        <input
+                          type="range" min="20" max="80"
+                          value={wmOpacity}
+                          onChange={(e) => setWmOpacity(Number(e.target.value))}
+                          className="pp-slider"
+                        />
+                        <div className="pp-range-labels"><span>20%</span><span>80%</span></div>
+                      </div>
+
+                      <div className="pp-field">
+                        <label>Размер шрифта: {wmFontSize}px</label>
+                        <input
+                          type="range" min="16" max="120"
+                          value={wmFontSize}
+                          onChange={(e) => setWmFontSize(Number(e.target.value))}
+                          className="pp-slider"
+                        />
+                        <div className="pp-range-labels"><span>16px</span><span>120px</span></div>
+                      </div>
+
+                      <div className="pp-field">
+                        <label>Лого (PNG, JPG, WebP, до 5 МБ)</label>
+                        {logoFile ? (
+                          <div className="pp-logo-row">
+                            <img src={logoPreviewUrl} alt="" className="pp-logo-thumb" />
+                            <span className="pp-logo-name">{logoFile.name}</span>
+                            <button type="button" className="pp-logo-remove" onClick={removeLogo}>&#10005;</button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button" className="pp-btn-outline"
+                            onClick={() => document.getElementById('logo-input').click()}
+                            disabled={logoUploading}
+                          >
+                            {logoUploading ? 'Загрузка...' : 'Выбрать лого'}
+                          </button>
+                        )}
+                        <input id="logo-input" type="file" accept="image/png,image/jpeg,image/webp" onChange={handleLogoSelect} hidden />
+                      </div>
+
+                      {logoFile && (
+                        <div className="pp-field">
+                          <label>Масштаб лого: {logoScale}%</label>
+                          <input
+                            type="range" min="10" max="50"
+                            value={logoScale}
+                            onChange={(e) => setLogoScale(Number(e.target.value))}
+                            className="pp-slider"
+                          />
+                          <div className="pp-range-labels"><span>10%</span><span>50%</span></div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                <div className="pp-field">
-                  <label>Формат</label>
-                  <div className="pp-options">
-                    {[
-                      { value: 'mp4', label: 'MP4' },
-                      { value: 'mov', label: 'MOV' },
-                    ].map((opt) => (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        className={`pp-opt-btn ${codec === opt.value ? 'pp-opt-btn--active' : ''}`}
-                        onClick={() => setCodec(opt.value)}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
+                {/* Quality & Format */}
+                <div className="pp-panel">
+                  <h3 className="pp-panel-title">Качество и формат</h3>
+                  <div className="pp-qf-row">
+                    <div className="pp-field" style={{ flex: 1 }}>
+                      <label>Качество</label>
+                      <div className="pp-options">
+                        {[
+                          { value: 'low', label: 'Низкое' },
+                          { value: 'medium', label: 'Среднее' },
+                          { value: 'high', label: 'Лучшее' },
+                        ].map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            className={`pp-opt-btn ${quality === opt.value ? 'pp-opt-btn--active' : ''}`}
+                            onClick={() => setQuality(opt.value)}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="pp-field" style={{ flex: 1 }}>
+                      <label>Формат</label>
+                      <div className="pp-options">
+                        {[
+                          { value: 'mp4', label: 'MP4' },
+                          { value: 'mov', label: 'MOV' },
+                        ].map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            className={`pp-opt-btn ${codec === opt.value ? 'pp-opt-btn--active' : ''}`}
+                            onClick={() => setCodec(opt.value)}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="pp-field" style={{ flex: 1 }}>
+                      <label>Email для уведомлений</label>
+                      <input
+                        type="email"
+                        placeholder="you@example.com"
+                        value={notifyEmail}
+                        onChange={(e) => {
+                          setNotifyEmail(e.target.value);
+                          localStorage.setItem('wmpro_notify_email', e.target.value);
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -662,10 +666,10 @@ function ProjectPage() {
               <button className="pp-btn-outline" onClick={resetForm} style={{ marginTop: 12 }}>Загрузить ещё</button>
             </div>
           )}
-        </section>
+        </div>
 
-        {/* ── RIGHT: Project files ────────────────────────────────── */}
-        <aside className="pp-right">
+        {/* ── SIDEBAR (right, files) ─────────────────────────────── */}
+        <aside className="pp-sidebar">
           <div className="pp-panel">
             <h3 className="pp-panel-title">Файлы проекта</h3>
 
