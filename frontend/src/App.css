@@ -2105,38 +2105,96 @@ body {
   gap: 16px;
 }
 
-/* ── Dropzone YouTube (taller, 16:9 aspect) ──────────────────── */
+/* ── Player zone (dropzone + video + watermark overlay) ───────── */
 
-.pp-dropzone-yt {
-  min-height: 360px;
+.pp-player-zone {
+  border: 2px dashed #e53935;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #111;
 }
 
-.pp-dropzone-yt .pp-video-player {
+.pp-player-zone--drag {
+  border-color: #c62828;
+  background: #1a0a0a;
+}
+
+.pp-player-zone--has-file {
+  border-style: solid;
+  border-color: #e53935;
+  cursor: default;
+}
+
+/* Video + overlay wrapper */
+.pp-player-wrap {
+  position: relative;
+  width: 100%;
+  background: #000;
+}
+
+.pp-player-video {
+  width: 100%;
+  display: block;
   max-height: 520px;
+  object-fit: contain;
+  background: #000;
 }
 
-/* ── Watermark section (below video) ─────────────────────────── */
-
-.pp-wm-section {
+/* Empty dropzone (dark bg, shows watermark preview) */
+.pp-player-empty {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
   display: flex;
-  flex-direction: column;
-  gap: 16px;
+  align-items: center;
+  justify-content: center;
+  background: #1a1a2a;
 }
 
-/* Watermark 2-col grid: preview left, controls right */
-.pp-wm-grid {
+.pp-player-empty .pp-drop-hint {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  color: #888;
+  pointer-events: none;
+}
+
+.pp-player-empty .pp-drop-icon {
+  font-size: 48px;
+  display: block;
+  margin-bottom: 8px;
+  color: #e53935;
+}
+
+.pp-player-empty .pp-drop-sub {
+  font-size: 13px;
+  margin-top: 4px;
+  color: #666;
+}
+
+/* Watermark overlay (sits on top of video / empty zone) */
+.pp-wm-overlay {
+  position: absolute;
+  inset: 0;
+  cursor: crosshair;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  z-index: 1;
+}
+
+/* Controls row (horizontal) below the player */
+.pp-controls-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
   align-items: start;
 }
 
-.pp-wm-grid-preview {
-  min-width: 0;
-}
-
-.pp-wm-grid-controls {
-  min-width: 0;
+.pp-controls-row .pp-field {
+  margin-bottom: 0;
 }
 
 /* Quality + Format row */
@@ -2240,21 +2298,7 @@ body {
   color: #999;
 }
 
-/* ── Watermark preview (16:9) ────────────────────────────────────── */
-
-.pp-wm-preview {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  background: #222;
-  border: 2px solid #e53935;
-  border-radius: 6px;
-  cursor: crosshair;
-  overflow: hidden;
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: none;
-}
+/* ── Watermark overlay elements ──────────────────────────────────── */
 
 .pp-wm-tc {
   position: absolute;
@@ -2333,68 +2377,7 @@ body {
   color: #e53935;
 }
 
-/* ── Dropzone ────────────────────────────────────────────────────── */
-
-.pp-dropzone {
-  border: 2px dashed #e53935;
-  border-radius: 12px;
-  padding: 60px 24px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  background: #fafafa;
-  min-height: 280px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.pp-dropzone:hover,
-.pp-dropzone--active {
-  border-color: #c62828;
-  background: #fff5f5;
-}
-
-.pp-dropzone--has-file {
-  border-style: solid;
-  border-color: #e53935;
-  padding: 0;
-  cursor: default;
-}
-
-.pp-drop-hint {
-  color: #888;
-}
-
-.pp-drop-icon {
-  font-size: 48px;
-  display: block;
-  margin-bottom: 8px;
-  color: #e53935;
-}
-
-.pp-drop-sub {
-  font-size: 13px;
-  margin-top: 4px;
-  color: #aaa;
-}
-
-/* ── Video preview (in dropzone) ─────────────────────────────────── */
-
-.pp-video-preview {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.pp-video-player {
-  width: 100%;
-  max-height: 400px;
-  display: block;
-  border-radius: 10px 10px 0 0;
-  background: #000;
-  object-fit: contain;
-}
+/* ── (old dropzone removed — now uses pp-player-zone) ──────────── */
 
 .pp-file-bar {
   display: flex;
@@ -2867,10 +2850,6 @@ body {
     order: 2;
   }
 
-  .pp-wm-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-
   .pp-qf-row {
     flex-wrap: wrap;
   }
@@ -2883,7 +2862,7 @@ body {
     gap: 16px;
   }
 
-  .pp-wm-grid {
+  .pp-controls-row {
     grid-template-columns: 1fr;
   }
 

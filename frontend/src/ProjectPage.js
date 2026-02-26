@@ -82,9 +82,9 @@ function ProjectPage() {
   const [dragOver, setDragOver] = useState(false);
   const [videoPreviewUrl, setVideoPreviewUrl] = useState(null);
   const pollRef = useRef(null);
-  const previewRef = useRef(null);
+  const overlayRef = useRef(null);
   const draggingRef = useRef(false);
-  const [previewWidth, setPreviewWidth] = useState(0);
+  const [overlayWidth, setOverlayWidth] = useState(0);
 
   // Fetch project data
   const fetchProject = useCallback(async () => {
@@ -104,16 +104,16 @@ function ProjectPage() {
     fetchProject();
   }, [fetchProject]);
 
-  // Track preview container width
+  // Track overlay width for scaled font sizes
   useEffect(() => {
-    const el = previewRef.current;
+    const el = overlayRef.current;
     if (!el) return;
     const ro = new ResizeObserver(([entry]) => {
-      setPreviewWidth(entry.contentRect.width);
+      setOverlayWidth(entry.contentRect.width);
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [projectLoading, jobId]);
+  }, [file, jobId]);
 
   const resetForm = () => {
     if (videoPreviewUrl) URL.revokeObjectURL(videoPreviewUrl);
@@ -168,8 +168,9 @@ function ProjectPage() {
     setLogoId(null);
   };
 
+  // Drag watermark position on the overlay (works on both dropzone-preview and video)
   const updatePosition = useCallback((e) => {
-    const rect = previewRef.current?.getBoundingClientRect();
+    const rect = overlayRef.current?.getBoundingClientRect();
     if (!rect) return;
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -179,21 +180,17 @@ function ProjectPage() {
     setWmY(Math.round(y));
   }, []);
 
-  const onPreviewMouseDown = useCallback((e) => {
+  const onOverlayMouseDown = useCallback((e) => {
     e.preventDefault();
     draggingRef.current = true;
     updatePosition(e);
   }, [updatePosition]);
 
-  const onPreviewMouseMove = useCallback((e) => {
+  const onOverlayMouseMove = useCallback((e) => {
     if (!draggingRef.current) return;
     e.preventDefault();
     updatePosition(e);
   }, [updatePosition]);
-
-  const onPreviewMouseUp = useCallback(() => {
-    draggingRef.current = false;
-  }, []);
 
   useEffect(() => {
     const handleUp = () => { draggingRef.current = false; };
@@ -333,6 +330,59 @@ function ProjectPage() {
 
   const isProcessing = jobStatus === 'pending' || jobStatus === 'processing';
 
+  // Watermark overlay element (reused on dropzone-empty and video)
+  const wmOverlay = (
+    <div
+      className="pp-wm-overlay"
+      ref={overlayRef}
+      onMouseDown={onOverlayMouseDown}
+      onMouseMove={onOverlayMouseMove}
+      onTouchStart={onOverlayMouseDown}
+      onTouchMove={onOverlayMouseMove}
+    >
+      {/* Timecode */}
+      <span
+        className="pp-wm-tc"
+        style={{
+          fontSize: `${Math.max(10, Math.round(36 * overlayWidth / 1920 * 1.5))}px`,
+          opacity: Math.max(0.35, Math.min((1 - wmOpacity / 100) + 0.4, 1)),
+        }}
+      >
+        00:00:00:00
+      </span>
+      {/* Client name + logo */}
+      <div
+        className="pp-wm-marker"
+        style={{
+          left: `${wmX}%`,
+          top: `${wmY}%`,
+          gap: `${Math.max(4, Math.round(Math.max(10, wmFontSize / 4) * overlayWidth / 1920 * 1.5))}px`,
+        }}
+      >
+        <span
+          className="pp-wm-text"
+          style={{
+            fontSize: `${Math.max(10, Math.round(wmFontSize * overlayWidth / 1920 * 1.5))}px`,
+            opacity: Math.max(0.3, 1 - wmOpacity / 100),
+          }}
+        >
+          {clientName.trim() || 'ФИО'}
+        </span>
+        {logoFile && logoPreviewUrl && (
+          <img
+            src={logoPreviewUrl}
+            alt=""
+            className="pp-wm-logo"
+            style={{
+              width: `${Math.max(30, Math.round(overlayWidth * logoScale / 100))}px`,
+              opacity: Math.max(0.3, 1 - wmOpacity / 100),
+            }}
+          />
+        )}
+      </div>
+    </div>
+  );
+
   if (projectLoading) {
     return (
       <div className="pp">
@@ -384,9 +434,9 @@ function ProjectPage() {
         <div className="pp-main">
           {!jobId && (
             <>
-              {/* Dropzone */}
+              {/* Dropzone with watermark overlay */}
               <div
-                className={`pp-dropzone pp-dropzone-yt ${dragOver ? 'pp-dropzone--active' : ''} ${file ? 'pp-dropzone--has-file' : ''}`}
+                className={`pp-player-zone ${dragOver ? 'pp-player-zone--drag' : ''} ${file ? 'pp-player-zone--has-file' : ''}`}
                 onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
                 onDragLeave={() => setDragOver(false)}
                 onDrop={handleDrop}
@@ -399,14 +449,19 @@ function ProjectPage() {
                   onChange={handleFileSelect}
                   hidden
                 />
+
                 {file && videoPreviewUrl ? (
-                  <div className="pp-video-preview">
-                    <video
-                      src={videoPreviewUrl}
-                      controls
-                      className="pp-video-player"
-                      onClick={(e) => e.stopPropagation()}
-                    />
+                  <>
+                    {/* Video with watermark overlay on top */}
+                    <div className="pp-player-wrap">
+                      <video
+                        src={videoPreviewUrl}
+                        controls
+                        className="pp-player-video"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      {wmOverlay}
+                    </div>
                     <div className="pp-file-bar">
                       <span className="pp-file-name">{file.name}</span>
                       <span className="pp-file-size">{formatSize(file.size)}</span>
@@ -418,199 +473,146 @@ function ProjectPage() {
                         Заменить
                       </button>
                     </div>
-                  </div>
+                  </>
                 ) : (
-                  <div className="pp-drop-hint">
-                    <span className="pp-drop-icon">&#8683;</span>
-                    <p>Перетащите видео сюда</p>
-                    <p className="pp-drop-sub">или нажмите для выбора</p>
+                  /* Empty dropzone — still shows watermark preview on dark bg */
+                  <div className="pp-player-empty">
+                    {wmOverlay}
+                    <div className="pp-drop-hint">
+                      <span className="pp-drop-icon">&#8683;</span>
+                      <p>Перетащите видео сюда</p>
+                      <p className="pp-drop-sub">или нажмите для выбора</p>
+                    </div>
                   </div>
                 )}
               </div>
 
-              {/* Watermark settings (below video, like YouTube description) */}
-              <div className="pp-wm-section">
-                <div className="pp-panel">
-                  <h3 className="pp-panel-title">Настройки ватермарк</h3>
-                  <div className="pp-wm-grid">
-                    {/* Left: Preview 16:9 */}
-                    <div className="pp-wm-grid-preview">
-                      <div
-                        className="pp-wm-preview"
-                        ref={previewRef}
-                        onMouseDown={onPreviewMouseDown}
-                        onMouseMove={onPreviewMouseMove}
-                        onMouseUp={onPreviewMouseUp}
-                        onTouchStart={onPreviewMouseDown}
-                        onTouchMove={onPreviewMouseMove}
-                        onTouchEnd={onPreviewMouseUp}
+              {/* Watermark controls (compact, below video) */}
+              <div className="pp-panel">
+                <h3 className="pp-panel-title">Настройки ватермарк</h3>
+                <div className="pp-controls-row">
+                  <div className="pp-field">
+                    <label>Имя клиента</label>
+                    <input
+                      type="text"
+                      placeholder="Иванов Иван Иванович"
+                      value={clientName}
+                      onChange={(e) => setClientName(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="pp-field">
+                    <label>Прозрачность: {wmOpacity}%</label>
+                    <input
+                      type="range" min="20" max="80"
+                      value={wmOpacity}
+                      onChange={(e) => setWmOpacity(Number(e.target.value))}
+                      className="pp-slider"
+                    />
+                    <div className="pp-range-labels"><span>20%</span><span>80%</span></div>
+                  </div>
+
+                  <div className="pp-field">
+                    <label>Размер шрифта: {wmFontSize}px</label>
+                    <input
+                      type="range" min="16" max="120"
+                      value={wmFontSize}
+                      onChange={(e) => setWmFontSize(Number(e.target.value))}
+                      className="pp-slider"
+                    />
+                    <div className="pp-range-labels"><span>16px</span><span>120px</span></div>
+                  </div>
+
+                  <div className="pp-field">
+                    <label>Лого (PNG/JPG/WebP)</label>
+                    {logoFile ? (
+                      <div className="pp-logo-row">
+                        <img src={logoPreviewUrl} alt="" className="pp-logo-thumb" />
+                        <span className="pp-logo-name">{logoFile.name}</span>
+                        <button type="button" className="pp-logo-remove" onClick={removeLogo}>&#10005;</button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button" className="pp-btn-outline"
+                        onClick={() => document.getElementById('logo-input').click()}
+                        disabled={logoUploading}
+                        style={{ padding: '8px 14px', fontSize: 13 }}
                       >
-                        <span
-                          className="pp-wm-tc"
-                          style={{
-                            fontSize: `${Math.max(10, Math.round(36 * previewWidth / 1920 * 1.5))}px`,
-                            opacity: Math.max(0.35, Math.min((1 - wmOpacity / 100) + 0.4, 1)),
-                          }}
-                        >
-                          00:00:00:00
-                        </span>
-                        <div
-                          className="pp-wm-marker"
-                          style={{
-                            left: `${wmX}%`,
-                            top: `${wmY}%`,
-                            gap: `${Math.max(4, Math.round(Math.max(10, wmFontSize / 4) * previewWidth / 1920 * 1.5))}px`,
-                          }}
-                        >
-                          <span
-                            className="pp-wm-text"
-                            style={{
-                              fontSize: `${Math.max(10, Math.round(wmFontSize * previewWidth / 1920 * 1.5))}px`,
-                              opacity: Math.max(0.3, 1 - wmOpacity / 100),
-                            }}
-                          >
-                            {clientName.trim() || 'ФИО'}
-                          </span>
-                          {logoFile && logoPreviewUrl && (
-                            <img
-                              src={logoPreviewUrl}
-                              alt=""
-                              className="pp-wm-logo"
-                              style={{
-                                width: `${Math.max(30, Math.round(previewWidth * logoScale / 100))}px`,
-                                opacity: Math.max(0.3, 1 - wmOpacity / 100),
-                              }}
-                            />
-                          )}
-                        </div>
-                      </div>
+                        {logoUploading ? 'Загрузка...' : 'Выбрать лого'}
+                      </button>
+                    )}
+                    <input id="logo-input" type="file" accept="image/png,image/jpeg,image/webp" onChange={handleLogoSelect} hidden />
+                  </div>
+
+                  {logoFile && (
+                    <div className="pp-field">
+                      <label>Масштаб лого: {logoScale}%</label>
+                      <input
+                        type="range" min="10" max="50"
+                        value={logoScale}
+                        onChange={(e) => setLogoScale(Number(e.target.value))}
+                        className="pp-slider"
+                      />
+                      <div className="pp-range-labels"><span>10%</span><span>50%</span></div>
                     </div>
+                  )}
+                </div>
+              </div>
 
-                    {/* Right: Controls */}
-                    <div className="pp-wm-grid-controls">
-                      <div className="pp-field">
-                        <label>Имя клиента</label>
-                        <input
-                          type="text"
-                          placeholder="Иванов Иван Иванович"
-                          value={clientName}
-                          onChange={(e) => setClientName(e.target.value)}
-                        />
-                      </div>
-
-                      <div className="pp-field">
-                        <label>Прозрачность: {wmOpacity}%</label>
-                        <input
-                          type="range" min="20" max="80"
-                          value={wmOpacity}
-                          onChange={(e) => setWmOpacity(Number(e.target.value))}
-                          className="pp-slider"
-                        />
-                        <div className="pp-range-labels"><span>20%</span><span>80%</span></div>
-                      </div>
-
-                      <div className="pp-field">
-                        <label>Размер шрифта: {wmFontSize}px</label>
-                        <input
-                          type="range" min="16" max="120"
-                          value={wmFontSize}
-                          onChange={(e) => setWmFontSize(Number(e.target.value))}
-                          className="pp-slider"
-                        />
-                        <div className="pp-range-labels"><span>16px</span><span>120px</span></div>
-                      </div>
-
-                      <div className="pp-field">
-                        <label>Лого (PNG, JPG, WebP, до 5 МБ)</label>
-                        {logoFile ? (
-                          <div className="pp-logo-row">
-                            <img src={logoPreviewUrl} alt="" className="pp-logo-thumb" />
-                            <span className="pp-logo-name">{logoFile.name}</span>
-                            <button type="button" className="pp-logo-remove" onClick={removeLogo}>&#10005;</button>
-                          </div>
-                        ) : (
-                          <button
-                            type="button" className="pp-btn-outline"
-                            onClick={() => document.getElementById('logo-input').click()}
-                            disabled={logoUploading}
-                          >
-                            {logoUploading ? 'Загрузка...' : 'Выбрать лого'}
-                          </button>
-                        )}
-                        <input id="logo-input" type="file" accept="image/png,image/jpeg,image/webp" onChange={handleLogoSelect} hidden />
-                      </div>
-
-                      {logoFile && (
-                        <div className="pp-field">
-                          <label>Масштаб лого: {logoScale}%</label>
-                          <input
-                            type="range" min="10" max="50"
-                            value={logoScale}
-                            onChange={(e) => setLogoScale(Number(e.target.value))}
-                            className="pp-slider"
-                          />
-                          <div className="pp-range-labels"><span>10%</span><span>50%</span></div>
-                        </div>
-                      )}
+              {/* Quality, Format, Email */}
+              <div className="pp-panel">
+                <h3 className="pp-panel-title">Качество и формат</h3>
+                <div className="pp-qf-row">
+                  <div className="pp-field" style={{ flex: 1 }}>
+                    <label>Качество</label>
+                    <div className="pp-options">
+                      {[
+                        { value: 'low', label: 'Низкое' },
+                        { value: 'medium', label: 'Среднее' },
+                        { value: 'high', label: 'Лучшее' },
+                      ].map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          className={`pp-opt-btn ${quality === opt.value ? 'pp-opt-btn--active' : ''}`}
+                          onClick={() => setQuality(opt.value)}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
                     </div>
                   </div>
-                </div>
 
-                {/* Quality & Format */}
-                <div className="pp-panel">
-                  <h3 className="pp-panel-title">Качество и формат</h3>
-                  <div className="pp-qf-row">
-                    <div className="pp-field" style={{ flex: 1 }}>
-                      <label>Качество</label>
-                      <div className="pp-options">
-                        {[
-                          { value: 'low', label: 'Низкое' },
-                          { value: 'medium', label: 'Среднее' },
-                          { value: 'high', label: 'Лучшее' },
-                        ].map((opt) => (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            className={`pp-opt-btn ${quality === opt.value ? 'pp-opt-btn--active' : ''}`}
-                            onClick={() => setQuality(opt.value)}
-                          >
-                            {opt.label}
-                          </button>
-                        ))}
-                      </div>
+                  <div className="pp-field" style={{ flex: 1 }}>
+                    <label>Формат</label>
+                    <div className="pp-options">
+                      {[
+                        { value: 'mp4', label: 'MP4' },
+                        { value: 'mov', label: 'MOV' },
+                      ].map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          className={`pp-opt-btn ${codec === opt.value ? 'pp-opt-btn--active' : ''}`}
+                          onClick={() => setCodec(opt.value)}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
                     </div>
+                  </div>
 
-                    <div className="pp-field" style={{ flex: 1 }}>
-                      <label>Формат</label>
-                      <div className="pp-options">
-                        {[
-                          { value: 'mp4', label: 'MP4' },
-                          { value: 'mov', label: 'MOV' },
-                        ].map((opt) => (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            className={`pp-opt-btn ${codec === opt.value ? 'pp-opt-btn--active' : ''}`}
-                            onClick={() => setCodec(opt.value)}
-                          >
-                            {opt.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="pp-field" style={{ flex: 1 }}>
-                      <label>Email для уведомлений</label>
-                      <input
-                        type="email"
-                        placeholder="you@example.com"
-                        value={notifyEmail}
-                        onChange={(e) => {
-                          setNotifyEmail(e.target.value);
-                          localStorage.setItem('wmpro_notify_email', e.target.value);
-                        }}
-                      />
-                    </div>
+                  <div className="pp-field" style={{ flex: 1 }}>
+                    <label>Email для уведомлений</label>
+                    <input
+                      type="email"
+                      placeholder="you@example.com"
+                      value={notifyEmail}
+                      onChange={(e) => {
+                        setNotifyEmail(e.target.value);
+                        localStorage.setItem('wmpro_notify_email', e.target.value);
+                      }}
+                    />
                   </div>
                 </div>
               </div>
