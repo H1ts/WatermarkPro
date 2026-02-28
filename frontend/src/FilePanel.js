@@ -84,11 +84,8 @@ export function FilePanel() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Upload failed');
       await refresh();
-      close();
-      navigate(`/watermark?file_id=${data.file_id}`, { replace: true });
     } catch {
-      close();
-      navigate('/watermark');
+      // ignore
     } finally {
       setUploading(false);
     }
@@ -96,7 +93,6 @@ export function FilePanel() {
 
   const handleFileClick = (f) => {
     close();
-    navigate(`/watermark?file_id=${f.file_id}`, { replace: true });
   };
 
   return (
