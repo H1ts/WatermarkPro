@@ -1,18 +1,14 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Hls from 'hls.js';
+import { FilePanelToggle, useFilePanel } from './FilePanel';
 
 const API = '/api';
 
 function WatermarkPage() {
   const navigate = useNavigate();
-
-  // File library
-  const [libraryFiles, setLibraryFiles] = useState([]);
-  const [libraryLoading, setLibraryLoading] = useState(true);
-
-  // File panel
-  const [filePanelOpen, setFilePanelOpen] = useState(false);
+  const [searchParams] = useSearchParams();
+  const { files: libraryFiles, loading: libraryLoading } = useFilePanel();
 
   // File selection
   const [file, setFile] = useState(null);              // local File object (new upload)
@@ -60,17 +56,14 @@ function WatermarkPage() {
   const resultVideoRef = useRef(null);
   const resultHlsRef = useRef(null);
 
-  // Fetch file library
+  // Auto-select file from URL param (?file_id=...)
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch(`${API}/files`);
-        const data = await res.json();
-        setLibraryFiles(data);
-      } catch { /* ignore */ }
-      finally { setLibraryLoading(false); }
-    })();
-  }, []);
+    const fid = searchParams.get('file_id');
+    if (fid && !selectedFileId && !file) {
+      setSelectedFileId(fid);
+      setFileId(fid);
+    }
+  }, [searchParams, selectedFileId, file]);
 
   // Video preview URL management
   useEffect(() => {
@@ -331,23 +324,10 @@ function WatermarkPage() {
           <button className="btn-back" onClick={() => navigate('/')}>&#8592; Главная</button>
         </div>
         <h1 className="logo">Ватермарк</h1>
-        <button
-          className="btn-file-panel-toggle"
-          onClick={() => setFilePanelOpen(!filePanelOpen)}
-          title="Файлы"
-        >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <line x1="3" y1="4" x2="17" y2="4" />
-            <line x1="3" y1="10" x2="17" y2="10" />
-            <line x1="3" y1="16" x2="17" y2="16" />
-          </svg>
-        </button>
+        <FilePanelToggle />
       </header>
 
-      <div className="wm-layout">
-        {/* ── Left: main content ─────────────────────────────────────── */}
-        <div className="wm-main">
-          <div className="page-content">
+      <div className="page-content">
             {/* ── Step 1: File selection ────────────────────────────────── */}
             {!jobId && !hasFile && (
               <div className="file-select-section">
@@ -614,73 +594,13 @@ function WatermarkPage() {
               </div>
             )}
 
-            {/* Error */}
-            {error && (
-              <div className="error">
-                <p>{error}</p>
-                <button onClick={() => setError(null)}>Закрыть</button>
-              </div>
-            )}
+        {/* Error */}
+        {error && (
+          <div className="error">
+            <p>{error}</p>
+            <button onClick={() => setError(null)}>Закрыть</button>
           </div>
-        </div>
-
-        {/* ── Right: collapsible file panel ───────────────────────────── */}
-        <div className={`file-panel ${filePanelOpen ? 'file-panel--open' : ''}`}>
-          <div className="file-panel-header">
-            <h3 className="file-panel-title">Файлы</h3>
-            <button className="file-panel-close" onClick={() => setFilePanelOpen(false)}>&#10005;</button>
-          </div>
-
-          {/* Upload button inside panel */}
-          <div className="file-panel-upload">
-            <button
-              className="file-panel-upload-btn"
-              onClick={() => document.getElementById('file-input-panel').click()}
-            >
-              + Загрузить видео
-            </button>
-            <input
-              id="file-input-panel"
-              type="file"
-              accept="video/*"
-              onChange={(e) => {
-                const selected = e.target.files[0];
-                if (selected) { resetForm(); setFile(selected); setFilePanelOpen(false); }
-              }}
-              hidden
-            />
-          </div>
-
-          {/* File list */}
-          <div className="file-panel-list">
-            {libraryLoading ? (
-              <div style={{ textAlign: 'center', padding: '20px 0' }}><div className="spinner" /></div>
-            ) : libraryFiles.length === 0 ? (
-              <p className="file-panel-empty">Нет загруженных файлов</p>
-            ) : (
-              libraryFiles.map((f) => (
-                <div
-                  key={f.file_id}
-                  className={`file-panel-item ${selectedFileId === f.file_id ? 'file-panel-item--active' : ''}`}
-                  onClick={() => { selectExistingFile(f); setFilePanelOpen(false); }}
-                >
-                  <div className="file-panel-item-thumb">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polygon points="5 3 19 12 5 21 5 3" />
-                    </svg>
-                  </div>
-                  <div className="file-panel-item-info">
-                    <span className="file-panel-item-name">{f.filename}</span>
-                    <span className="file-panel-item-size">{formatSize(f.size)}</span>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Overlay when panel is open on mobile */}
-        {filePanelOpen && <div className="file-panel-overlay" onClick={() => setFilePanelOpen(false)} />}
+        )}
       </div>
     </div>
   );

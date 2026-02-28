@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FilePanelToggle, useFilePanel } from './FilePanel';
 
 const API = '/api';
 
@@ -7,6 +8,7 @@ function ReviewSelectPage() {
   const navigate = useNavigate();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { open: openFilePanel } = useFilePanel();
 
   useEffect(() => {
     (async () => {
@@ -26,6 +28,7 @@ function ReviewSelectPage() {
           <button className="btn-back" onClick={() => navigate('/')}>&#8592; Главная</button>
         </div>
         <h1 className="logo">Рецензирование</h1>
+        <FilePanelToggle />
       </header>
 
       <div className="page-content">
@@ -38,9 +41,9 @@ function ReviewSelectPage() {
         {!loading && jobs.length === 0 && (
           <div className="empty-state">
             <p>Нет обработанных видео</p>
-            <p className="empty-state-sub">Сначала обработайте видео через Ватермарк</p>
-            <button className="btn-primary" style={{ width: 'auto', padding: '10px 24px', marginTop: 16 }} onClick={() => navigate('/watermark')}>
-              Перейти к Ватермарк
+            <p className="empty-state-sub">Сначала загрузите и обработайте видео</p>
+            <button className="btn-primary" style={{ width: 'auto', padding: '10px 24px', marginTop: 16 }} onClick={openFilePanel}>
+              Загрузить видео
             </button>
           </div>
         )}

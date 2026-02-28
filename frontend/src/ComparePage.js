@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Hls from 'hls.js';
+import { FilePanelToggle, useFilePanel } from './FilePanel';
 
 const API = '/api';
 
@@ -133,6 +134,7 @@ function ComparePage() {
     setShareStatus(`Ссылка скопирована. Отправьте на ${shareEmail.trim()}`);
   };
 
+  const { open: openFilePanel } = useFilePanel();
   const isSelected = (job) => selectedA?.id === job.id || selectedB?.id === job.id;
 
   return (
@@ -144,6 +146,7 @@ function ComparePage() {
           </button>
         </div>
         <h1 className="logo">Сравнение версий</h1>
+        <FilePanelToggle />
         {step === 'compare' && (
           <div className="compare-mode-toggle">
             <button
@@ -185,8 +188,8 @@ function ComparePage() {
             <div className="empty-state">
               <p>Недостаточно обработанных видео</p>
               <p className="empty-state-sub">Для сравнения нужно минимум 2 обработанных видео</p>
-              <button className="btn-primary" style={{ width: 'auto', padding: '10px 24px', marginTop: 16 }} onClick={() => navigate('/watermark')}>
-                Перейти к Ватермарк
+              <button className="btn-primary" style={{ width: 'auto', padding: '10px 24px', marginTop: 16 }} onClick={openFilePanel}>
+                Загрузить видео
               </button>
             </div>
           )}

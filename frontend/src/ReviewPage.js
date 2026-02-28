@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Hls from 'hls.js';
+import { FilePanelToggle } from './FilePanel';
 
 const API = '/api';
 
@@ -413,6 +414,7 @@ function ReviewPage() {
         <button className="btn-back" onClick={() => navigate(-1)}>&#8592; Назад</button>
         <h1 className="review-title">{jobInfo.filename || 'Video'}</h1>
         <span className="review-client">{jobInfo.client_name}</span>
+        <FilePanelToggle />
       </header>
 
       <div className="review-body">

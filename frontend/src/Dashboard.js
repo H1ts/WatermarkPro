@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FilePanelToggle } from './FilePanel';
 
 const features = [
   {
@@ -47,6 +48,7 @@ function Dashboard() {
       <header className="header">
         <h1 className="logo">WatermarkPro</h1>
         <p className="subtitle">Video watermark & secure streaming</p>
+        <FilePanelToggle />
       </header>
 
       <main className="dashboard">
