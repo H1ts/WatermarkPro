@@ -11,6 +11,9 @@ function WatermarkPage() {
   const [libraryFiles, setLibraryFiles] = useState([]);
   const [libraryLoading, setLibraryLoading] = useState(true);
 
+  // File panel
+  const [filePanelOpen, setFilePanelOpen] = useState(false);
+
   // File selection
   const [file, setFile] = useState(null);              // local File object (new upload)
   const [selectedFileId, setSelectedFileId] = useState(null); // existing file_id
@@ -328,308 +331,356 @@ function WatermarkPage() {
           <button className="btn-back" onClick={() => navigate('/')}>&#8592; Главная</button>
         </div>
         <h1 className="logo">Ватермарк</h1>
+        <button
+          className="btn-file-panel-toggle"
+          onClick={() => setFilePanelOpen(!filePanelOpen)}
+          title="Файлы"
+        >
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <line x1="3" y1="4" x2="17" y2="4" />
+            <line x1="3" y1="10" x2="17" y2="10" />
+            <line x1="3" y1="16" x2="17" y2="16" />
+          </svg>
+        </button>
       </header>
 
-      <div className="page-content">
-        {/* ── Step 1: File selection ────────────────────────────────── */}
-        {!jobId && !hasFile && (
-          <div className="file-select-section">
-            <h2 className="section-title">Выберите видео</h2>
+      <div className="wm-layout">
+        {/* ── Left: main content ─────────────────────────────────────── */}
+        <div className="wm-main">
+          <div className="page-content">
+            {/* ── Step 1: File selection ────────────────────────────────── */}
+            {!jobId && !hasFile && (
+              <div className="file-select-section">
+                <h2 className="section-title">Выберите видео</h2>
 
-            {/* Upload dropzone */}
-            <div
-              className={`video-dropzone video-dropzone--empty ${dragOver ? 'video-dropzone--drag' : ''}`}
-              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={handleDrop}
-              onClick={() => document.getElementById('file-input').click()}
-            >
-              <div className="video-drop-hint">
-                <span className="drop-icon">&#8683;</span>
-                <p>Перетащите видео сюда</p>
-                <p className="drop-sub">или нажмите для выбора</p>
+                {/* Upload dropzone */}
+                <div
+                  className={`video-dropzone video-dropzone--empty ${dragOver ? 'video-dropzone--drag' : ''}`}
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={handleDrop}
+                  onClick={() => document.getElementById('file-input').click()}
+                >
+                  <div className="video-drop-hint">
+                    <span className="drop-icon">&#8683;</span>
+                    <p>Перетащите видео сюда</p>
+                    <p className="drop-sub">или нажмите для выбора</p>
+                  </div>
+                </div>
+                <input id="file-input" type="file" accept="video/*" onChange={handleFileSelect} hidden />
               </div>
-            </div>
-            <input id="file-input" type="file" accept="video/*" onChange={handleFileSelect} hidden />
+            )}
 
-            {/* Library */}
-            {libraryLoading ? (
-              <div style={{ textAlign: 'center', padding: '20px 0' }}><div className="spinner" /></div>
-            ) : libraryFiles.length > 0 && (
+            {/* ── Step 2: Watermark config ─────────────────────────────── */}
+            {!jobId && hasFile && (
               <>
-                <h3 className="section-subtitle">Или выберите из загруженных</h3>
-                <div className="file-library-grid">
-                  {libraryFiles.map((f) => (
-                    <div
-                      key={f.file_id}
-                      className="file-library-card"
-                      onClick={() => selectExistingFile(f)}
-                    >
-                      <div className="file-library-thumb">
-                        <span className="file-library-icon">&#9654;</span>
+                {/* Video preview with watermark overlay */}
+                <div
+                  className={`video-dropzone ${dragOver ? 'video-dropzone--drag' : ''}`}
+                  ref={previewRef}
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={handleDrop}
+                  onMouseDown={onPreviewMouseDown}
+                  onMouseMove={onPreviewMouseMove}
+                  onMouseUp={onPreviewMouseUp}
+                  onTouchStart={onPreviewMouseDown}
+                  onTouchMove={onPreviewMouseMove}
+                  onTouchEnd={onPreviewMouseUp}
+                >
+                  {videoPreviewUrl && (
+                    <>
+                      <video
+                        ref={videoPreviewRef}
+                        src={videoPreviewUrl}
+                        muted
+                        preload="metadata"
+                        playsInline
+                        crossOrigin="anonymous"
+                        style={{
+                          position: 'absolute', top: 0, left: 0,
+                          width: '100%', height: '100%',
+                          objectFit: 'contain', pointerEvents: 'none',
+                        }}
+                        onLoadedData={(e) => {
+                          e.target.currentTime = 0.5;
+                          if (e.target.videoWidth > 0) setVideoNativeWidth(e.target.videoWidth);
+                        }}
+                      />
+
+                      {/* Timecode */}
+                      <span
+                        className="wm-preview-timecode"
+                        style={{
+                          fontSize: `${Math.max(10, Math.round(36 * previewWidth / videoNativeWidth))}px`,
+                          opacity: Math.max(0.35, Math.min((1 - wmOpacity / 100) + 0.4, 1)),
+                        }}
+                      >
+                        00:00:00:00
+                      </span>
+
+                      {/* Watermark text + logo marker */}
+                      {(clientName.trim() || (logoFile && logoPreviewUrl)) && (
+                        <div className="wm-preview-marker" style={{ left: `${wmX}%`, top: `${wmY}%`, gap: '0px' }}>
+                          {clientName.trim() && (
+                            <span
+                              className="wm-preview-text"
+                              style={{
+                                fontSize: `${Math.max(10, Math.round(wmFontSize * previewWidth / videoNativeWidth))}px`,
+                                opacity: Math.max(0.3, 1 - wmOpacity / 100),
+                              }}
+                            >
+                              {clientName.trim()}
+                            </span>
+                          )}
+                          {logoFile && logoPreviewUrl && (
+                            <img
+                              src={logoPreviewUrl}
+                              alt=""
+                              className="wm-preview-logo"
+                              style={{
+                                width: `${Math.max(30, Math.round(previewWidth * logoScale / 100))}px`,
+                                opacity: Math.max(0.3, 1 - wmOpacity / 100),
+                              }}
+                            />
+                          )}
+                        </div>
+                      )}
+
+                      {/* File info */}
+                      <div
+                        className="video-file-badge"
+                        style={{ pointerEvents: 'auto', cursor: 'pointer' }}
+                        onClick={(e) => { e.stopPropagation(); resetForm(); }}
+                        title="Нажмите чтобы заменить"
+                      >
+                        &#9654; {file ? file.name : libraryFiles.find(f => f.file_id === selectedFileId)?.filename || 'video'}
+                        {file && <> &middot; {formatSize(file.size)}</>}
                       </div>
-                      <div className="file-library-info">
-                        <span className="file-library-name">{f.filename}</span>
-                        <span className="file-library-size">{formatSize(f.size)}</span>
+                    </>
+                  )}
+                </div>
+
+                {/* Settings panels */}
+                <div className="settings-row">
+                  <div className="settings-panel">
+                    <h4 className="settings-panel-title">Ватермарк</h4>
+                    <div className="form-group">
+                      <label className="form-label">Текст для ватермарка</label>
+                      <input
+                        className="form-input"
+                        type="text"
+                        placeholder="Любой текст для наложения"
+                        value={clientName}
+                        onChange={(e) => setClientName(e.target.value)}
+                      />
+                    </div>
+                    <div className="form-row">
+                      <div className="form-row-item">
+                        <label className="form-label">Прозрачность: {wmOpacity}%</label>
+                        <input className="form-slider" type="range" min="20" max="80" value={wmOpacity} onChange={(e) => setWmOpacity(Number(e.target.value))} />
+                      </div>
+                      <div className="form-row-item">
+                        <label className="form-label">Шрифт: {wmFontSize}px</label>
+                        <input className="form-slider" type="range" min="16" max="120" value={wmFontSize} onChange={(e) => setWmFontSize(Number(e.target.value))} />
                       </div>
                     </div>
-                  ))}
+                    <div className="form-group">
+                      <label className="form-label">Лого (PNG, JPG, WebP, до 5 МБ)</label>
+                      {logoFile ? (
+                        <div className="logo-preview">
+                          <img src={logoPreviewUrl} alt="" className="logo-thumb" />
+                          <span className="logo-name">{logoFile.name}</span>
+                          <button type="button" className="logo-remove" onClick={removeLogo}>&#10005;</button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          className="logo-upload-btn"
+                          onClick={() => document.getElementById('logo-input').click()}
+                          disabled={logoUploading}
+                        >
+                          {logoUploading ? 'Загрузка...' : 'Выбрать лого'}
+                        </button>
+                      )}
+                      <input id="logo-input" type="file" accept="image/png,image/jpeg,image/webp" onChange={handleLogoSelect} hidden />
+                    </div>
+                    {logoFile && (
+                      <div className="form-group">
+                        <label className="form-label">Масштаб лого: {logoScale}%</label>
+                        <input className="form-slider" type="range" min="10" max="50" value={logoScale} onChange={(e) => setLogoScale(Number(e.target.value))} />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="settings-panel">
+                    <h4 className="settings-panel-title">Настройки вывода</h4>
+                    <div className="form-group">
+                      <label className="form-label">Качество</label>
+                      <select className="form-select" value={quality} onChange={(e) => setQuality(e.target.value)}>
+                        <option value="low">Низкое (быстро)</option>
+                        <option value="medium">Среднее</option>
+                        <option value="high">Лучшее (медленно)</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Формат</label>
+                      <select className="form-select" value={codec} onChange={(e) => setCodec(e.target.value)}>
+                        <option value="mp4">MP4</option>
+                        <option value="mov">MOV</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
+
+                <button
+                  className="btn-primary"
+                  onClick={upload}
+                  disabled={!hasFile || !clientName.trim() || uploading}
+                >
+                  {uploading ? `Загрузка... ${uploadProgress}%` : 'Обработать'}
+                </button>
+
+                {uploading && (
+                  <div className="progress-bar">
+                    <div className="progress-fill" style={{ width: `${uploadProgress}%` }} />
+                  </div>
+                )}
               </>
             )}
-          </div>
-        )}
 
-        {/* ── Step 2: Watermark config ─────────────────────────────── */}
-        {!jobId && hasFile && (
-          <>
-            {/* Video preview with watermark overlay */}
-            <div
-              className={`video-dropzone ${dragOver ? 'video-dropzone--drag' : ''}`}
-              ref={previewRef}
-              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={handleDrop}
-              onMouseDown={onPreviewMouseDown}
-              onMouseMove={onPreviewMouseMove}
-              onMouseUp={onPreviewMouseUp}
-              onTouchStart={onPreviewMouseDown}
-              onTouchMove={onPreviewMouseMove}
-              onTouchEnd={onPreviewMouseUp}
-            >
-              {videoPreviewUrl && (
-                <>
-                  <video
-                    ref={videoPreviewRef}
-                    src={videoPreviewUrl}
-                    muted
-                    preload="metadata"
-                    playsInline
-                    crossOrigin="anonymous"
-                    style={{
-                      position: 'absolute', top: 0, left: 0,
-                      width: '100%', height: '100%',
-                      objectFit: 'contain', pointerEvents: 'none',
-                    }}
-                    onLoadedData={(e) => {
-                      e.target.currentTime = 0.5;
-                      if (e.target.videoWidth > 0) setVideoNativeWidth(e.target.videoWidth);
-                    }}
-                  />
-
-                  {/* Timecode */}
-                  <span
-                    className="wm-preview-timecode"
-                    style={{
-                      fontSize: `${Math.max(10, Math.round(36 * previewWidth / videoNativeWidth))}px`,
-                      opacity: Math.max(0.35, Math.min((1 - wmOpacity / 100) + 0.4, 1)),
-                    }}
-                  >
-                    00:00:00:00
-                  </span>
-
-                  {/* Watermark text + logo marker */}
-                  {(clientName.trim() || (logoFile && logoPreviewUrl)) && (
-                    <div className="wm-preview-marker" style={{ left: `${wmX}%`, top: `${wmY}%`, gap: '0px' }}>
-                      {clientName.trim() && (
-                        <span
-                          className="wm-preview-text"
-                          style={{
-                            fontSize: `${Math.max(10, Math.round(wmFontSize * previewWidth / videoNativeWidth))}px`,
-                            opacity: Math.max(0.3, 1 - wmOpacity / 100),
-                          }}
-                        >
-                          {clientName.trim()}
-                        </span>
-                      )}
-                      {logoFile && logoPreviewUrl && (
-                        <img
-                          src={logoPreviewUrl}
-                          alt=""
-                          className="wm-preview-logo"
-                          style={{
-                            width: `${Math.max(30, Math.round(previewWidth * logoScale / 100))}px`,
-                            opacity: Math.max(0.3, 1 - wmOpacity / 100),
-                          }}
-                        />
-                      )}
-                    </div>
-                  )}
-
-                  {/* File info */}
-                  <div
-                    className="video-file-badge"
-                    style={{ pointerEvents: 'auto', cursor: 'pointer' }}
-                    onClick={(e) => { e.stopPropagation(); resetForm(); }}
-                    title="Нажмите чтобы заменить"
-                  >
-                    &#9654; {file ? file.name : libraryFiles.find(f => f.file_id === selectedFileId)?.filename || 'video'}
-                    {file && <> &middot; {formatSize(file.size)}</>}
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Settings panels */}
-            <div className="settings-row">
-              <div className="settings-panel">
-                <h4 className="settings-panel-title">Ватермарк</h4>
-                <div className="form-group">
-                  <label className="form-label">Текст для ватермарка</label>
-                  <input
-                    className="form-input"
-                    type="text"
-                    placeholder="Любой текст для наложения"
-                    value={clientName}
-                    onChange={(e) => setClientName(e.target.value)}
-                  />
+            {/* ── Step 3: Processing ───────────────────────────────────── */}
+            {isProcessing && (
+              <div className="processing">
+                <div className="spinner" />
+                <h2>Обработка видео...</h2>
+                <p className="status-text">{jobStatus === 'pending' ? 'В очереди' : 'Кодирование'}</p>
+                <div className="progress-bar">
+                  <div className="progress-fill" style={{ width: `${jobProgress}%` }} />
                 </div>
-                <div className="form-row">
-                  <div className="form-row-item">
-                    <label className="form-label">Прозрачность: {wmOpacity}%</label>
-                    <input className="form-slider" type="range" min="20" max="80" value={wmOpacity} onChange={(e) => setWmOpacity(Number(e.target.value))} />
-                  </div>
-                  <div className="form-row-item">
-                    <label className="form-label">Шрифт: {wmFontSize}px</label>
-                    <input className="form-slider" type="range" min="16" max="120" value={wmFontSize} onChange={(e) => setWmFontSize(Number(e.target.value))} />
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Лого (PNG, JPG, WebP, до 5 МБ)</label>
-                  {logoFile ? (
-                    <div className="logo-preview">
-                      <img src={logoPreviewUrl} alt="" className="logo-thumb" />
-                      <span className="logo-name">{logoFile.name}</span>
-                      <button type="button" className="logo-remove" onClick={removeLogo}>&#10005;</button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      className="logo-upload-btn"
-                      onClick={() => document.getElementById('logo-input').click()}
-                      disabled={logoUploading}
-                    >
-                      {logoUploading ? 'Загрузка...' : 'Выбрать лого'}
-                    </button>
-                  )}
-                  <input id="logo-input" type="file" accept="image/png,image/jpeg,image/webp" onChange={handleLogoSelect} hidden />
-                </div>
-                {logoFile && (
-                  <div className="form-group">
-                    <label className="form-label">Масштаб лого: {logoScale}%</label>
-                    <input className="form-slider" type="range" min="10" max="50" value={logoScale} onChange={(e) => setLogoScale(Number(e.target.value))} />
-                  </div>
-                )}
-              </div>
-
-              <div className="settings-panel">
-                <h4 className="settings-panel-title">Настройки вывода</h4>
-                <div className="form-group">
-                  <label className="form-label">Качество</label>
-                  <select className="form-select" value={quality} onChange={(e) => setQuality(e.target.value)}>
-                    <option value="low">Низкое (быстро)</option>
-                    <option value="medium">Среднее</option>
-                    <option value="high">Лучшее (медленно)</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Формат</label>
-                  <select className="form-select" value={codec} onChange={(e) => setCodec(e.target.value)}>
-                    <option value="mp4">MP4</option>
-                    <option value="mov">MOV</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <button
-              className="btn-primary"
-              onClick={upload}
-              disabled={!hasFile || !clientName.trim() || uploading}
-            >
-              {uploading ? `Загрузка... ${uploadProgress}%` : 'Обработать'}
-            </button>
-
-            {uploading && (
-              <div className="progress-bar">
-                <div className="progress-fill" style={{ width: `${uploadProgress}%` }} />
+                <p className="progress-text">{jobProgress}%</p>
               </div>
             )}
-          </>
-        )}
 
-        {/* ── Step 3: Processing ───────────────────────────────────── */}
-        {isProcessing && (
-          <div className="processing">
-            <div className="spinner" />
-            <h2>Обработка видео...</h2>
-            <p className="status-text">{jobStatus === 'pending' ? 'В очереди' : 'Кодирование'}</p>
-            <div className="progress-bar">
-              <div className="progress-fill" style={{ width: `${jobProgress}%` }} />
-            </div>
-            <p className="progress-text">{jobProgress}%</p>
-          </div>
-        )}
-
-        {/* ── Step 4: Result + Share ───────────────────────────────── */}
-        {jobStatus === 'done' && watchUrl && (
-          <div className="result-player">
-            <div className="result-video-wrap">
-              <video
-                ref={resultVideoRef}
-                className="result-video"
-                controls
-                playsInline
-                autoPlay
-                onContextMenu={(e) => e.preventDefault()}
-              />
-            </div>
-
-            <div className="result-bar">
-              <div className="result-actions">
-                <a href={`/review/${jobId}`} className="btn-watch">Рецензировать</a>
-                {downloadUrl && (
-                  <a href={downloadUrl} download className="btn-download">Скачать {codec.toUpperCase()}</a>
-                )}
-                <button className="btn-secondary" onClick={resetForm}>Загрузить ещё</button>
-              </div>
-              <div className="link-box">
-                <input readOnly value={watchUrl} onClick={(e) => e.target.select()} />
-                <button onClick={() => navigator.clipboard.writeText(watchUrl)}>Копировать</button>
-              </div>
-
-              {/* Share by email */}
-              <div className="share-section">
-                <h4 className="share-title">Поделиться по email</h4>
-                <div className="share-row">
-                  <input
-                    className="share-input"
-                    type="email"
-                    placeholder="email@example.com"
-                    value={shareEmail}
-                    onChange={(e) => setShareEmail(e.target.value)}
+            {/* ── Step 4: Result + Share ───────────────────────────────── */}
+            {jobStatus === 'done' && watchUrl && (
+              <div className="result-player">
+                <div className="result-video-wrap">
+                  <video
+                    ref={resultVideoRef}
+                    className="result-video"
+                    controls
+                    playsInline
+                    autoPlay
+                    onContextMenu={(e) => e.preventDefault()}
                   />
-                  <button
-                    className="share-btn"
-                    onClick={handleShare}
-                    disabled={!shareEmail.trim()}
-                  >
-                    Отправить
-                  </button>
                 </div>
-                {shareStatus && <p className="share-status">{shareStatus}</p>}
-              </div>
-            </div>
-          </div>
-        )}
 
-        {/* Error */}
-        {error && (
-          <div className="error">
-            <p>{error}</p>
-            <button onClick={() => setError(null)}>Закрыть</button>
+                <div className="result-bar">
+                  <div className="result-actions">
+                    <a href={`/review/${jobId}`} className="btn-watch">Рецензировать</a>
+                    {downloadUrl && (
+                      <a href={downloadUrl} download className="btn-download">Скачать {codec.toUpperCase()}</a>
+                    )}
+                    <button className="btn-secondary" onClick={resetForm}>Загрузить ещё</button>
+                  </div>
+                  <div className="link-box">
+                    <input readOnly value={watchUrl} onClick={(e) => e.target.select()} />
+                    <button onClick={() => navigator.clipboard.writeText(watchUrl)}>Копировать</button>
+                  </div>
+
+                  {/* Share by email */}
+                  <div className="share-section">
+                    <h4 className="share-title">Поделиться по email</h4>
+                    <div className="share-row">
+                      <input
+                        className="share-input"
+                        type="email"
+                        placeholder="email@example.com"
+                        value={shareEmail}
+                        onChange={(e) => setShareEmail(e.target.value)}
+                      />
+                      <button
+                        className="share-btn"
+                        onClick={handleShare}
+                        disabled={!shareEmail.trim()}
+                      >
+                        Отправить
+                      </button>
+                    </div>
+                    {shareStatus && <p className="share-status">{shareStatus}</p>}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Error */}
+            {error && (
+              <div className="error">
+                <p>{error}</p>
+                <button onClick={() => setError(null)}>Закрыть</button>
+              </div>
+            )}
           </div>
-        )}
+        </div>
+
+        {/* ── Right: collapsible file panel ───────────────────────────── */}
+        <div className={`file-panel ${filePanelOpen ? 'file-panel--open' : ''}`}>
+          <div className="file-panel-header">
+            <h3 className="file-panel-title">Файлы</h3>
+            <button className="file-panel-close" onClick={() => setFilePanelOpen(false)}>&#10005;</button>
+          </div>
+
+          {/* Upload button inside panel */}
+          <div className="file-panel-upload">
+            <button
+              className="file-panel-upload-btn"
+              onClick={() => document.getElementById('file-input-panel').click()}
+            >
+              + Загрузить видео
+            </button>
+            <input
+              id="file-input-panel"
+              type="file"
+              accept="video/*"
+              onChange={(e) => {
+                const selected = e.target.files[0];
+                if (selected) { resetForm(); setFile(selected); setFilePanelOpen(false); }
+              }}
+              hidden
+            />
+          </div>
+
+          {/* File list */}
+          <div className="file-panel-list">
+            {libraryLoading ? (
+              <div style={{ textAlign: 'center', padding: '20px 0' }}><div className="spinner" /></div>
+            ) : libraryFiles.length === 0 ? (
+              <p className="file-panel-empty">Нет загруженных файлов</p>
+            ) : (
+              libraryFiles.map((f) => (
+                <div
+                  key={f.file_id}
+                  className={`file-panel-item ${selectedFileId === f.file_id ? 'file-panel-item--active' : ''}`}
+                  onClick={() => { selectExistingFile(f); setFilePanelOpen(false); }}
+                >
+                  <div className="file-panel-item-thumb">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polygon points="5 3 19 12 5 21 5 3" />
+                    </svg>
+                  </div>
+                  <div className="file-panel-item-info">
+                    <span className="file-panel-item-name">{f.filename}</span>
+                    <span className="file-panel-item-size">{formatSize(f.size)}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Overlay when panel is open on mobile */}
+        {filePanelOpen && <div className="file-panel-overlay" onClick={() => setFilePanelOpen(false)} />}
       </div>
     </div>
   );

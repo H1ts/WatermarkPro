@@ -1936,6 +1936,202 @@ body {
   transition: width 0.15s linear;
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+   File Panel Toggle Button (header)
+   ══════════════════════════════════════════════════════════════════════ */
+
+.btn-file-panel-toggle {
+  margin-left: auto;
+  background: none;
+  border: 1px solid #e53935;
+  border-radius: 4px;
+  color: #e53935;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.btn-file-panel-toggle:hover {
+  background: #ffebee;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   Watermark Page Layout (main + file panel)
+   ══════════════════════════════════════════════════════════════════════ */
+
+.wm-layout {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+.wm-main {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   Collapsible File Panel (right side)
+   ══════════════════════════════════════════════════════════════════════ */
+
+.file-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 320px;
+  height: 100vh;
+  background: #fff;
+  border-left: 2px solid #e53935;
+  display: flex;
+  flex-direction: column;
+  z-index: 200;
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0);
+}
+
+.file-panel--open {
+  transform: translateX(0);
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.1);
+}
+
+.file-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid #e0e0e0;
+  flex-shrink: 0;
+}
+
+.file-panel-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.file-panel-close {
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+
+.file-panel-close:hover {
+  color: #e53935;
+  background: #ffebee;
+}
+
+.file-panel-upload {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e0e0e0;
+  flex-shrink: 0;
+}
+
+.file-panel-upload-btn {
+  width: 100%;
+  padding: 10px;
+  border: 2px dashed #e53935;
+  border-radius: 4px;
+  background: #fff;
+  color: #e53935;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Roboto', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.file-panel-upload-btn:hover {
+  background: #ffebee;
+}
+
+.file-panel-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.file-panel-empty {
+  color: #999;
+  font-size: 13px;
+  text-align: center;
+  padding: 30px 16px;
+}
+
+.file-panel-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border: 1px solid transparent;
+}
+
+.file-panel-item:hover {
+  background: #fafafa;
+  border-color: #e0e0e0;
+}
+
+.file-panel-item--active {
+  background: #ffebee;
+  border-color: #e53935;
+}
+
+.file-panel-item-thumb {
+  width: 48px;
+  height: 36px;
+  background: #1a1a1a;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.file-panel-item-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.file-panel-item-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1a1a1a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-panel-item-size {
+  font-size: 11px;
+  color: #999;
+}
+
+.file-panel-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 199;
+}
+
 /* ── Responsive ────────────────────────────────────────────────────── */
 
 @media (max-width: 768px) {
@@ -1975,5 +2171,10 @@ body {
 
   .file-library-grid {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+
+  .file-panel {
+    width: 85vw;
+    max-width: 320px;
   }
 }
