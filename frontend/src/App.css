@@ -1607,6 +1607,29 @@ body {
   box-shadow: 0 0 0 2px rgba(229, 57, 53, 0.2);
 }
 
+.file-library-card--upload {
+  border-style: dashed;
+  border-color: #666;
+}
+
+.file-library-card--upload:hover {
+  border-color: #e53935;
+}
+
+.file-library-card--drag {
+  border-color: #e53935;
+  background: rgba(229, 57, 53, 0.05);
+}
+
+.file-library-thumb--upload {
+  background: #2a2a2a;
+}
+
+.file-library-thumb--upload .file-library-icon {
+  font-size: 36px;
+  opacity: 0.5;
+}
+
 .file-library-thumb {
   position: relative;
   width: 100%;

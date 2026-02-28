@@ -334,20 +334,48 @@ function WatermarkPage() {
               <div className="file-select-section">
                 <h2 className="section-title">Выберите видео</h2>
 
-                {/* Upload dropzone */}
-                <div
-                  className={`video-dropzone video-dropzone--empty ${dragOver ? 'video-dropzone--drag' : ''}`}
-                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                  onDragLeave={() => setDragOver(false)}
-                  onDrop={handleDrop}
-                  onClick={() => document.getElementById('file-input').click()}
-                >
-                  <div className="video-drop-hint">
-                    <span className="drop-icon">&#8683;</span>
-                    <p>Перетащите видео сюда</p>
-                    <p className="drop-sub">или нажмите для выбора</p>
+                {libraryLoading && (
+                  <div style={{ textAlign: 'center', padding: '40px 0' }}><div className="spinner" /></div>
+                )}
+
+                {!libraryLoading && (
+                  <div className="file-library-grid">
+                    {/* Existing files */}
+                    {libraryFiles.map((f) => (
+                      <div
+                        key={f.file_id}
+                        className="file-library-card"
+                        onClick={() => selectExistingFile(f)}
+                      >
+                        <div className="file-library-thumb">
+                          <span className="file-library-icon">&#9654;</span>
+                        </div>
+                        <div className="file-library-info">
+                          <span className="file-library-name">{f.filename}</span>
+                          <span className="file-library-size">{formatSize(f.size)}</span>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Upload new card */}
+                    <div
+                      className={`file-library-card file-library-card--upload ${dragOver ? 'file-library-card--drag' : ''}`}
+                      onClick={() => document.getElementById('file-input').click()}
+                      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                      onDragLeave={() => setDragOver(false)}
+                      onDrop={handleDrop}
+                    >
+                      <div className="file-library-thumb file-library-thumb--upload">
+                        <span className="file-library-icon">+</span>
+                      </div>
+                      <div className="file-library-info">
+                        <span className="file-library-name">Загрузить новое</span>
+                        <span className="file-library-size">или перетащите сюда</span>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
+
                 <input id="file-input" type="file" accept="video/*" onChange={handleFileSelect} hidden />
               </div>
             )}
