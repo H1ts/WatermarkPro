@@ -45,6 +45,14 @@ PRD: `WatermarkPro_PRD.docx` в корне репозитория — полна
 - [x] BASE_URL через .env
 - [x] README на русском
 - [x] CLAUDE.md для сохранения контекста
+- [x] Новый Dashboard — 3 раздела: Ватермарк, Сравнение версий, Рецензирование
+- [x] Библиотека файлов — глобальная панель ≡ на всех страницах (загрузка/выбор файлов)
+- [x] WatermarkPage — отдельная страница для наложения ватермарка с выбором из загруженных файлов
+- [x] ComparePage — сравнение любых 2 загруженных видео (side-by-side / A/B), синхронное воспроизведение
+- [x] ReviewSelectPage — выбор обработанного видео для рецензирования
+- [x] Встроенный HLS-плеер на странице результата (вместо перехода на отдельную страницу)
+- [x] Белая/красная/чёрная тема, шрифт Roboto
+- [x] WYSIWYG превью — превью совпадает с реальным рендером (размеры шрифтов, позиции)
 
 ### Не готово — MVP P0 (критичные для запуска)
 - [ ] Signed URLs + TTL + лимит просмотров — защита ссылок от скачивания
@@ -72,9 +80,34 @@ PRD: `WatermarkPro_PRD.docx` в корне репозитория — полна
 - .env: BASE_URL=http://85.198.84.222
 - Статус: задеплоен, все 4 контейнера Up, сайт доступен
 
-## Последняя сессия — 2026-02-25
+## История сессий
 
-### Что сделано (сессия 3)
+### Сессия 5 (текущая) — 2026-02-28
+- **Новый Dashboard** — 3 главных раздела: Ватермарк, Сравнение версий, Рецензирование
+- **Библиотека файлов (FilePanel)** — глобальная выдвижная панель ≡ на всех страницах
+  - Загрузка видео из любой страницы
+  - Список всех загруженных файлов (backend: GET /api/files)
+  - После загрузки — не перекидывает на /watermark, остаёшься на текущей странице
+- **WatermarkPage** — отдельная страница наложения ватермарка
+  - Вместо пустой дропзоны — сетка загруженных файлов для выбора
+  - Карточка «Загрузить новое» с drag & drop в конце сетки
+  - WYSIWYG превью совпадает с реальным рендером
+- **ComparePage** — сравнение любых 2 загруженных видео (не только обработанных)
+  - Режимы: side-by-side и A/B
+  - Синхронное воспроизведение + общий таймлайн + seek
+  - Стрим исходных файлов через /api/files/{id}/stream (без HLS)
+- **ReviewSelectPage** — выбор обработанного видео для рецензирования
+- **Встроенный HLS-плеер** на странице результата
+- **Редизайн** — белая/красная/чёрная тема, шрифт Roboto, двухколоночный layout настроек
+- Backend: API для файлов (GET /files, GET /files/{id}/stream, GET /jobs/all)
+- Ветка: `claude/resume-work-i300f-jp2cM`
+
+### Сессия 4 — 2026-02-27
+- Редизайн Dashboard и ProjectPage — 7 UI-улучшений
+- Откат лишних изменений дизайна
+- Ветка: `claude/resume-work-i300f-jp2cM`
+
+### Сессия 3 — 2026-02-25
 - **Review & Comments** — полная система рецензирования (аналог Frame.io)
   - ReviewPage: HLS-плеер + canvas overlay для аннотаций
   - Инструменты рисования: карандаш, стрелка, круг, прямоугольник + 5 цветов
@@ -88,7 +121,7 @@ PRD: `WatermarkPro_PRD.docx` в корне репозитория — полна
 - Обновлены README и CLAUDE.md
 - Ветка: `claude/resume-work-i300F`
 
-### Что сделано (сессия 2)
+### Сессия 2 — 2026-02-25
 - **Проекты** — полная реализация структуры с проектами
   - Dashboard: список проектов + кнопка «Новый проект» + модалка создания
   - Внутри проекта: форма загрузки видео + настройки watermark + история файлов
@@ -97,7 +130,7 @@ PRD: `WatermarkPro_PRD.docx` в корне репозитория — полна
   - SPA routing через nginx (try_files → index.html)
   - Интерфейс переведён на русский
 
-### Что сделано (сессия 1) — 2026-02-24
+### Сессия 1 — 2026-02-24
 - Таймкод перенесён с низа на верх кадра, размер увеличен с 24px до 36px
 - В превью добавлен таймкод — теперь превью соответствует реальному рендеру
 
@@ -107,15 +140,25 @@ PRD: `WatermarkPro_PRD.docx` в корне репозитория — полна
 3. **PostgreSQL** — миграция метаданных с Redis на нормальную БД
 
 ## Ключевые файлы
-- `backend/app/main.py` — API эндпоинты (projects, upload, process, status, watch, comments, download)
+
+### Backend
+- `backend/app/main.py` — API эндпоинты (files, jobs, projects, upload, process, status, watch, comments, download)
 - `backend/app/ffmpeg_worker.py` — обработка видео (watermark + logo → MP4/MOV → HLS)
 - `backend/app/models.py` — Pydantic модели (ProcessRequest, JobInfo, ProjectInfo, ProjectDetail, CommentInfo и др.)
 - `backend/app/config.py` — конфигурация (dirs, redis, base_url)
-- `frontend/src/App.js` — роутер (Dashboard, ProjectPage, ReviewPage)
-- `frontend/src/Dashboard.js` — список проектов, модалка создания
-- `frontend/src/ProjectPage.js` — загрузка видео, настройки watermark/logo/quality/codec, история файлов
+
+### Frontend
+- `frontend/src/App.js` — роутер (Dashboard, WatermarkPage, ComparePage, ReviewSelectPage, ReviewPage)
+- `frontend/src/Dashboard.js` — главная: 3 карточки (Ватермарк, Сравнение, Рецензирование)
+- `frontend/src/WatermarkPage.js` — наложение ватермарка: выбор файла из библиотеки → настройки → обработка → результат
+- `frontend/src/ComparePage.js` — сравнение любых 2 загруженных видео (side-by-side / A/B)
+- `frontend/src/ReviewSelectPage.js` — выбор обработанного видео для рецензирования
 - `frontend/src/ReviewPage.js` — рецензирование: HLS-плеер, canvas-аннотации, комментарии, таймлайн
-- `frontend/src/App.css` — стили (тёмная тема, gradient purple)
+- `frontend/src/FilePanel.js` — глобальная выдвижная панель файлов (≡), доступна на всех страницах
+- `frontend/src/ProjectPage.js` — (legacy) загрузка видео внутри проекта
+- `frontend/src/App.css` — стили (белая/красная/чёрная тема, Roboto)
+
+### Инфраструктура
 - `frontend/nginx.conf` — SPA routing (try_files → index.html)
 - `nginx/nginx.conf` — маршруты: / → frontend, /api → backend, /hls → статика
 - `docker-compose.yml` — оркестрация 4 сервисов
