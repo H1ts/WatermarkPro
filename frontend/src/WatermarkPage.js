@@ -57,13 +57,14 @@ function WatermarkPage() {
   const resultHlsRef = useRef(null);
 
   // Auto-select file from URL param (?file_id=...)
+  const fileIdFromUrl = searchParams.get('file_id');
   useEffect(() => {
-    const fid = searchParams.get('file_id');
-    if (fid && !selectedFileId && !file) {
-      setSelectedFileId(fid);
-      setFileId(fid);
+    if (fileIdFromUrl && fileIdFromUrl !== selectedFileId) {
+      setFile(null);
+      setSelectedFileId(fileIdFromUrl);
+      setFileId(fileIdFromUrl);
     }
-  }, [searchParams, selectedFileId, file]);
+  }, [fileIdFromUrl]); // depends only on URL param change
 
   // Video preview URL management
   useEffect(() => {

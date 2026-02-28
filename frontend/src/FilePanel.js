@@ -71,29 +71,32 @@ export function FilePanel() {
     return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
   };
 
+  const [uploading, setUploading] = useState(false);
+
   const handleUpload = async (e) => {
     const selected = e.target.files[0];
     if (!selected) return;
-    // Upload file, then navigate to watermark with file_id
+    setUploading(true);
     try {
       const formData = new FormData();
       formData.append('file', selected);
       const res = await fetch(`${API}/upload`, { method: 'POST', body: formData });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Upload failed');
-      refresh();
+      await refresh();
       close();
-      navigate(`/watermark?file_id=${data.file_id}`);
+      navigate(`/watermark?file_id=${data.file_id}`, { replace: true });
     } catch {
-      // Fallback: just navigate to watermark
       close();
       navigate('/watermark');
+    } finally {
+      setUploading(false);
     }
   };
 
   const handleFileClick = (f) => {
     close();
-    navigate(`/watermark?file_id=${f.file_id}`);
+    navigate(`/watermark?file_id=${f.file_id}`, { replace: true });
   };
 
   return (
@@ -108,8 +111,9 @@ export function FilePanel() {
           <button
             className="file-panel-upload-btn"
             onClick={() => document.getElementById('file-panel-input').click()}
+            disabled={uploading}
           >
-            + Загрузить видео
+            {uploading ? 'Загрузка...' : '+ Загрузить видео'}
           </button>
           <input
             id="file-panel-input"
