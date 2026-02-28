@@ -1,78 +1,46 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const API = '/api';
+const features = [
+  {
+    key: 'watermark',
+    title: 'ВАТЕРМАРК',
+    description: 'Наложение текстового и графического водяного знака на видео',
+    path: '/watermark',
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <path d="M9 12l2 2 4-4" />
+      </svg>
+    ),
+  },
+  {
+    key: 'review',
+    title: 'РЕЦЕНЗИРОВАНИЕ',
+    description: 'Просмотр видео с комментариями привязанными к таймкоду',
+    path: '/review-select',
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+      </svg>
+    ),
+  },
+  {
+    key: 'compare',
+    title: 'СРАВНЕНИЕ ВЕРСИЙ',
+    description: 'Сравнение двух версий видео side-by-side или в режиме A/B',
+    path: '/compare',
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="3" width="8" height="18" rx="1" />
+        <rect x="14" y="3" width="8" height="18" rx="1" />
+      </svg>
+    ),
+  },
+];
 
 function Dashboard() {
-  const [projects, setProjects] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [creating, setCreating] = useState(false);
-  const [error, setError] = useState(null);
   const navigate = useNavigate();
-
-  const fetchProjects = useCallback(async () => {
-    try {
-      const res = await fetch(`${API}/projects`);
-      const data = await res.json();
-      setProjects(data);
-    } catch {
-      setError('Не удалось загрузить проекты');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchProjects();
-  }, [fetchProjects]);
-
-  const createProject = async () => {
-    if (!newName.trim()) return;
-    setCreating(true);
-    setError(null);
-    try {
-      const res = await fetch(`${API}/projects`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newName.trim() }),
-      });
-      if (!res.ok) throw new Error('Ошибка создания проекта');
-      const project = await res.json();
-      setShowModal(false);
-      setNewName('');
-      navigate(`/projects/${project.id}`);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setCreating(false);
-    }
-  };
-
-  const deleteProject = async (e, projectId) => {
-    e.stopPropagation();
-    if (!window.confirm('Удалить проект?')) return;
-    try {
-      await fetch(`${API}/projects/${projectId}`, { method: 'DELETE' });
-      setProjects((prev) => prev.filter((p) => p.id !== projectId));
-    } catch {
-      setError('Не удалось удалить проект');
-    }
-  };
-
-  const formatDate = (iso) => {
-    try {
-      const d = new Date(iso);
-      return d.toLocaleDateString('ru-RU', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-      });
-    } catch {
-      return '';
-    }
-  };
 
   return (
     <div className="app">
@@ -82,103 +50,21 @@ function Dashboard() {
       </header>
 
       <main className="dashboard">
-        <div className="dashboard-top">
-          <h2 className="dashboard-title">Проекты</h2>
-          <button className="btn-create" onClick={() => setShowModal(true)}>
-            + Новый проект
-          </button>
+        <h2 className="dashboard-title">Выберите инструмент</h2>
+        <div className="feature-grid">
+          {features.map((f) => (
+            <div
+              key={f.key}
+              className="feature-card"
+              onClick={() => navigate(f.path)}
+            >
+              <div className="feature-card-icon">{f.icon}</div>
+              <h3 className="feature-card-title">{f.title}</h3>
+              <p className="feature-card-desc">{f.description}</p>
+            </div>
+          ))}
         </div>
-
-        {loading && (
-          <div className="dashboard-empty">
-            <div className="spinner" />
-          </div>
-        )}
-
-        {!loading && projects.length === 0 && (
-          <div className="dashboard-empty">
-            <span className="empty-icon">&#128193;</span>
-            <p>Нет проектов</p>
-            <p className="empty-sub">Создайте первый проект, чтобы начать работу</p>
-          </div>
-        )}
-
-        {!loading && projects.length > 0 && (
-          <div className="project-grid">
-            {projects.map((p) => (
-              <div
-                key={p.id}
-                className="project-card"
-                onClick={() => navigate(`/projects/${p.id}`)}
-              >
-                <div className="project-card-thumb">
-                  <span className="project-card-thumb-icon">&#127916;</span>
-                </div>
-                <div className="project-card-body">
-                  <div className="project-card-info">
-                    <h3 className="project-card-name">{p.name}</h3>
-                    <div className="project-card-meta">
-                      <span>{formatDate(p.created_at)}</span>
-                      <span>{p.job_count} {p.job_count === 1 ? 'файл' : p.job_count >= 2 && p.job_count <= 4 ? 'файла' : 'файлов'}</span>
-                    </div>
-                  </div>
-                  <button
-                    className="project-card-delete"
-                    onClick={(e) => deleteProject(e, p.id)}
-                    title="Удалить проект"
-                  >
-                    &#10005;
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {error && (
-          <div className="error">
-            <p>{error}</p>
-            <button onClick={() => setError(null)}>Закрыть</button>
-          </div>
-        )}
       </main>
-
-      {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3 className="modal-title">Новый проект</h3>
-            <div className="form-group">
-              <label htmlFor="project-name">Название проекта</label>
-              <input
-                id="project-name"
-                className="form-input"
-                type="text"
-                placeholder="Мой проект"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && createProject()}
-                autoFocus
-              />
-            </div>
-            <div className="modal-actions">
-              <button
-                className="btn-cancel"
-                onClick={() => { setShowModal(false); setNewName(''); }}
-              >
-                Отмена
-              </button>
-              <button
-                className="btn-primary"
-                onClick={createProject}
-                disabled={!newName.trim() || creating}
-                style={{ width: 'auto', marginTop: 0, padding: '10px 24px' }}
-              >
-                {creating ? 'Создание...' : 'Создать'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

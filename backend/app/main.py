@@ -146,7 +146,9 @@ async def upload_video(file: UploadFile = File(...)):
         "filename": file.filename or "video.mp4",
         "path": dest,
         "size": str(os.path.getsize(dest)),
+        "uploaded_at": datetime.now(timezone.utc).isoformat(),
     })
+    await r.sadd("files", file_id)
     await r.aclose()
 
     return {"file_id": file_id, "filename": file.filename, "size": os.path.getsize(dest)}
@@ -228,6 +230,7 @@ async def process(req: ProcessRequest):
     if req.project_id:
         job_mapping["project_id"] = req.project_id
     await r.hset(f"job:{job_id}", mapping=job_mapping)
+    await r.sadd("jobs", job_id)
     if req.project_id:
         await r.sadd(f"project:{req.project_id}:jobs", job_id)
     await r.aclose()
@@ -464,6 +467,74 @@ async def delete_comment(comment_id: str):
         await r.srem(f"job:{job_id}:comments", comment_id)
     await r.aclose()
     return {"ok": True}
+
+
+# ── File library ──────────────────────────────────────────────────────
+
+@app.get("/files")
+async def list_files():
+    """List all uploaded source video files."""
+    r = _redis()
+    file_ids = await r.smembers("files")
+    files = []
+    for fid_bytes in file_ids:
+        fid = fid_bytes.decode() if isinstance(fid_bytes, bytes) else fid_bytes
+        data = await r.hgetall(f"file:{fid}")
+        if not data:
+            continue
+        files.append({
+            "file_id": fid,
+            "filename": data.get(b"filename", b"").decode(),
+            "size": int(data.get(b"size", b"0").decode()),
+            "uploaded_at": data.get(b"uploaded_at", b"").decode(),
+        })
+    await r.aclose()
+    files.sort(key=lambda f: f["uploaded_at"], reverse=True)
+    return files
+
+
+@app.get("/files/{file_id}/stream")
+async def stream_file(file_id: str):
+    """Stream an uploaded source video file."""
+    r = _redis()
+    data = await r.hgetall(f"file:{file_id}")
+    await r.aclose()
+    if not data:
+        raise HTTPException(status_code=404, detail="File not found")
+    path = data[b"path"].decode()
+    if not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail="File not on disk")
+    return FileResponse(path, media_type="video/mp4")
+
+
+@app.get("/jobs/all")
+async def list_all_jobs():
+    """List all completed jobs (for review/compare file picker)."""
+    r = _redis()
+    job_ids = await r.smembers("jobs")
+    jobs = []
+    for jid_bytes in job_ids:
+        jid = jid_bytes.decode() if isinstance(jid_bytes, bytes) else jid_bytes
+        data = await r.hgetall(f"job:{jid}")
+        if not data:
+            continue
+        status_val = data.get(b"status", b"pending").decode()
+        if status_val != "done":
+            continue
+        jobs.append(JobInfo(
+            id=jid,
+            status=JobStatus(status_val),
+            progress=100,
+            filename=data.get(b"filename", b"").decode() or None,
+            client_name=data.get(b"client_name", b"").decode() or None,
+            watch_url=f"{BASE_URL}/watch/{jid}",
+            download_url=f"{BASE_URL}/api/download/{jid}",
+            codec=data.get(b"codec", b"mp4").decode(),
+            error=None,
+        ))
+    await r.aclose()
+    jobs.sort(key=lambda j: j.id, reverse=True)
+    return jobs
 
 
 @app.get("/health")
